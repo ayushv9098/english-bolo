@@ -16,7 +16,7 @@ export default async function HomePage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("name, streak, xp_points, avatar_emoji")
+    .select("name, streak, xp_points, avatar_emoji, goal")
     .eq("id", user.id)
     .single();
 
@@ -127,8 +127,15 @@ export default async function HomePage() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <Star className="text-green-500" size={32} />
               </div>
-              <h3 className="font-bold text-lg text-brand-dark">All Caught Up!</h3>
-              <p className="text-muted text-sm">You have completed all available lessons. Awesome job!</p>
+              <div className="space-y-1">
+                <h3 className="font-bold text-lg text-brand-dark">All Caught Up!</h3>
+                <p className="text-muted text-[13px] leading-relaxed max-w-[200px] mx-auto">You have completed all available lessons. Awesome job!</p>
+              </div>
+              <Link href="/lessons" className="mt-2 w-full">
+                <Button className="w-full bg-brand-orange text-white rounded-pill py-3.5 font-bold">
+                  Browse Old Lessons
+                </Button>
+              </Link>
             </Card>
           </section>
         )}

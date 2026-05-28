@@ -47,16 +47,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface">
-      {/* DEBUG INFO - REMOVE AFTER FIX */}
-      <div className="mb-4 p-2 bg-black text-white text-[10px] rounded font-mono">
-        Config URL: {process.env.NEXT_PUBLIC_SUPABASE_URL || "MISSING"}
-      </div>
-      
       <Card className="w-full max-w-md p-10 space-y-10 border-navy-100 shadow-float">
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 bg-brand-orange/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-brand-orange/20">
-            <span className="text-2xl font-black text-brand-orange">A</span>
-          </div>
           <h1 className="text-3xl font-bold text-brand-dark tracking-tight leading-none">AngreziBolo</h1>
           <p className="text-muted font-medium text-sm">Sign in to continue learning</p>
         </div>

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import Link from "next/link";
 import { 
   Zap, 
   Star, 
@@ -16,12 +17,15 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
   const [profile, setProfile] = useState<any>(null);
   const [lessonsCount, setLessonsCount] = useState(0);
+  const [darkMode, setDarkMode] = useState(false);
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
 
   useEffect(() => {
     async function loadProfile() {
@@ -48,6 +52,16 @@ export default function ProfilePage() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    toast.success(darkMode ? "Light mode activated" : "Dark mode activated");
+  };
+
+  const toggleReminders = () => {
+    setRemindersEnabled(!remindersEnabled);
+    toast.success(remindersEnabled ? "Reminders paused" : "Reminders enabled for 8:30 PM");
   };
 
   if (!profile) return <div className="min-h-screen bg-surface flex items-center justify-center font-bold text-muted">Loading profile...</div>;
@@ -96,49 +110,70 @@ export default function ProfilePage() {
       <section className="flex flex-col gap-4">
         <h3 className="text-[13px] font-bold text-brand-dark px-1">Settings</h3>
         <div className="flex flex-col gap-3">
-          {[
-            { 
-              icon: Bell, 
-              label: "Daily Reminders", 
-              right: <span className="text-[11px] font-bold text-brand-orange bg-orange-50 px-2 py-1 rounded-md">8:30 PM</span> 
-            },
-            { 
-              icon: Moon, 
-              label: "Dark Mode", 
-              right: (
-                <div className="w-10 h-5 bg-gray-200 rounded-full relative">
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all"></div>
-                </div>
-              ) 
-            },
-            { 
-              icon: Shield, 
-              label: "Privacy & Security", 
-              right: <ChevronRight size={16} className="text-muted" strokeWidth={2} /> 
-            },
-            { 
-              icon: Settings, 
-              label: "System Preferences", 
-              right: <ChevronRight size={16} className="text-muted" strokeWidth={2} /> 
-            },
-          ].map((item, i) => (
-            <Card key={i} className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-colors cursor-pointer shadow-sm">
+          {/* Daily Reminders Toggle */}
+          <Card 
+            onClick={toggleReminders}
+            className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-colors cursor-pointer shadow-sm active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-muted">
+                <Bell size={18} strokeWidth={1.5} className={remindersEnabled ? "text-brand-orange" : ""} />
+              </div>
+              <span className="text-[14px] font-bold text-brand-dark">Daily Reminders</span>
+            </div>
+            <span className={`text-[11px] font-bold px-2 py-1 rounded-md transition-colors ${remindersEnabled ? 'text-brand-orange bg-orange-50' : 'text-muted bg-gray-100'}`}>
+              {remindersEnabled ? '8:30 PM' : 'Off'}
+            </span>
+          </Card>
+
+          {/* Dark Mode Toggle */}
+          <Card 
+            onClick={toggleDarkMode}
+            className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-colors cursor-pointer shadow-sm active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-muted">
+                <Moon size={18} strokeWidth={1.5} className={darkMode ? "text-brand-purple" : ""} />
+              </div>
+              <span className="text-[14px] font-bold text-brand-dark">Dark Mode</span>
+            </div>
+            <div className={`w-10 h-5 rounded-full relative transition-colors ${darkMode ? 'bg-brand-purple' : 'bg-gray-200'}`}>
+              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${darkMode ? 'left-5' : 'left-0.5'}`}></div>
+            </div>
+          </Card>
+
+          {/* Privacy Link */}
+          <Link href="/profile/privacy">
+            <Card className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-colors cursor-pointer shadow-sm active:scale-[0.98]">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-muted">
-                  <item.icon size={18} strokeWidth={1.5} />
+                  <Shield size={18} strokeWidth={1.5} />
                 </div>
-                <span className="text-[14px] font-bold text-brand-dark">{item.label}</span>
+                <span className="text-[14px] font-bold text-brand-dark">Privacy & Security</span>
               </div>
-              {item.right}
+              <ChevronRight size={16} className="text-muted" strokeWidth={2} />
             </Card>
-          ))}
+          </Link>
+
+          {/* System Preferences Link */}
+          <Link href="/profile/system">
+            <Card className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-colors cursor-pointer shadow-sm active:scale-[0.98]">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-muted">
+                  <Settings size={18} strokeWidth={1.5} />
+                </div>
+                <span className="text-[14px] font-bold text-brand-dark">System Preferences</span>
+              </div>
+              <ChevronRight size={16} className="text-muted" strokeWidth={2} />
+            </Card>
+          </Link>
         </div>
       </section>
 
       {/* SIGN OUT BUTTON */}
       <Button 
         variant="ghost" 
-        className="mt-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 gap-2 font-bold py-4 rounded-pill bg-white"
+        className="mt-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 gap-2 font-bold py-4 rounded-pill bg-white active:scale-95"
         fullWidth
         onClick={handleSignOut}
       >

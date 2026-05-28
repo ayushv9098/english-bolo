@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import { Zap, Calendar, CheckCircle2, Lock, MessageSquare, Flame as FlameIcon, Star as StarIcon, Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
