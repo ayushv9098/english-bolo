@@ -6,6 +6,9 @@ import Card from "@/components/ui/Card";
 import { Zap, Calendar, CheckCircle2, Lock, MessageSquare, Flame as FlameIcon, Star as StarIcon, Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
+import PageTransition from "@/components/ui/PageTransition";
+import { Skeleton } from "@/components/ui/Skeleton";
+
 const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 const BADGE_ICON_MAP = {
@@ -117,10 +120,37 @@ export default function ProgressPage() {
     loadProgress();
   }, [router, supabase]);
 
-  if (loading) return <div className="min-h-screen bg-surface p-10 flex items-center justify-center font-bold text-muted">Loading progress...</div>;
+  if (loading) {
+    return (
+      <PageTransition className="flex flex-col gap-6 p-6 pb-24">
+        <header className="pt-8">
+          <Skeleton className="h-8 w-32 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </header>
+        <section className="flex flex-col gap-3">
+          <div className="flex justify-between">
+             <Skeleton className="h-4 w-24" />
+             <Skeleton className="h-4 w-20" />
+          </div>
+          <Card className="p-5 border-none shadow-sm"><Skeleton className="h-24 w-full" /></Card>
+        </section>
+        <section className="flex flex-col gap-3">
+          <div className="flex justify-between">
+             <Skeleton className="h-4 w-24" />
+             <Skeleton className="h-4 w-16" />
+          </div>
+          <Card className="p-6 border-none shadow-sm"><Skeleton className="h-32 w-full" /></Card>
+        </section>
+        <section className="grid grid-cols-2 gap-4">
+          <Card className="p-5 border-none shadow-sm"><Skeleton className="h-16 w-full" /></Card>
+          <Card className="p-5 border-none shadow-sm"><Skeleton className="h-16 w-full" /></Card>
+        </section>
+      </PageTransition>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <PageTransition className="flex flex-col gap-6 p-6 pb-24">
       {/* HEADER */}
       <header className="pt-8">
         <h1 className="text-[28px] font-[800] text-brand-dark tracking-[-0.5px]">Activity</h1>
@@ -173,7 +203,7 @@ export default function ProgressPage() {
               <div key={i} className="flex flex-col items-center gap-2 flex-1 h-full justify-end">
                 <div
                   className={`w-full rounded-t-lg transition-all duration-1000 ${
-                    i === 6 ? "bg-brand-orange" : "bg-brand-orange/30"
+                    i === 6 ? "bg-brand-orange" : "bg-brand-orange/30 hover:bg-brand-orange/50 cursor-pointer"
                   }`}
                   style={{ height: `${Math.max(10, val)}%` }}
                 />
@@ -217,8 +247,8 @@ export default function ProgressPage() {
             return (
               <Card
                 key={badge.id}
-                className={`p-4 flex flex-col items-center text-center gap-2 border-none transition-all shadow-sm ${
-                  badge.status === "locked" ? "opacity-50 grayscale" : ""
+                className={`p-4 flex flex-col items-center text-center gap-2 border-none transition-all shadow-sm hover:-translate-y-1 hover:shadow-md cursor-pointer ${
+                  badge.status === "locked" ? "opacity-50 grayscale hover:grayscale-0 hover:opacity-100" : ""
                 }`}
               >
                 <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mb-1">
@@ -254,6 +284,6 @@ export default function ProgressPage() {
           })}
         </div>
       </section>
-    </div>
+    </PageTransition>
   );
 }

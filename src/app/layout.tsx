@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Noto_Sans_Devanagari } from "next/font/google";
 import { Agentation } from "agentation";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 const baloo2 = Baloo_2({ 
@@ -37,6 +38,28 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${baloo2.variable} ${notoDevanagari.variable} font-sans`}>
+        <Toaster 
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: '#333',
+              color: '#fff',
+              borderRadius: '12px',
+              fontFamily: 'var(--font-baloo2), sans-serif',
+              fontWeight: 500,
+            },
+            success: {
+              style: {
+                background: '#22c55e',
+              },
+            },
+            error: {
+              style: {
+                background: '#ef4444',
+              },
+            },
+          }}
+        />
         {children}
         <Agentation />
       </body>

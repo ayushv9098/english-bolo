@@ -11,6 +11,10 @@ import ProgressBar from "@/components/ui/ProgressBar";
 import { createClient } from "@/lib/supabase/client";
 import { updateUserStreakAndXP } from "@/lib/streak";
 
+import PageTransition from "@/components/ui/PageTransition";
+import { Skeleton } from "@/components/ui/Skeleton";
+import confetti from "canvas-confetti";
+
 export default function LessonPage() {
   const router = useRouter();
   const params = useParams();
@@ -134,9 +138,18 @@ export default function LessonPage() {
 
   const handleNextStep = () => {
     if (step < 5) {
-      setStep(step + 1);
-      if (step + 1 === 5 && typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate([100]);
+      const nextStep = step + 1;
+      setStep(nextStep);
+      if (nextStep === 5) {
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate([100]);
+        }
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#FF6B35', '#6C63FF', '#22C55E']
+        });
       }
     }
   };
@@ -164,14 +177,37 @@ export default function LessonPage() {
     router.push("/lessons");
   };
 
-  if (loading) return <div className="min-h-screen bg-surface flex items-center justify-center font-bold text-muted">Loading lesson...</div>;
+  if (loading) {
+    return (
+      <PageTransition className="flex flex-col min-h-screen bg-surface px-4 pt-6">
+        <div className="max-w-md mx-auto w-full flex items-center justify-between mb-4">
+          <Skeleton className="w-10 h-10 rounded-full" />
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="w-16 h-6 rounded-pill" />
+        </div>
+        <Skeleton className="h-2 w-full max-w-md mx-auto rounded-full mb-8" />
+        <main className="flex-1 max-w-md mx-auto w-full p-6 flex flex-col gap-8">
+           <div className="flex flex-col items-center gap-3">
+              <Skeleton className="h-4 w-32 rounded-full" />
+              <Skeleton className="h-8 w-48 rounded-full" />
+           </div>
+           <Card className="p-8 border-none shadow-sm flex flex-col items-center gap-6">
+             <Skeleton className="w-20 h-20 rounded-full" />
+             <Skeleton className="h-6 w-full" />
+             <Skeleton className="h-4 w-3/4" />
+           </Card>
+        </main>
+      </PageTransition>
+    );
+  }
+
   if (!lesson || phrases.length === 0) return <div className="min-h-screen bg-surface flex items-center justify-center font-bold text-muted">Lesson content unavailable.</div>;
 
   const currentPhrase = phrases[currentPhraseIdx];
   const progressPercent = (step / 5) * 100;
 
   return (
-    <div className="flex flex-col min-h-screen bg-surface selection:bg-brand-orange/20 animate-in fade-in duration-500">
+    <PageTransition className="flex flex-col min-h-screen bg-surface selection:bg-brand-orange/20 pb-24">
       {/* TOP BAR */}
       <div className="sticky top-0 z-20 bg-surface px-4 pt-6 pb-2">
         <div className="max-w-md mx-auto">
@@ -363,6 +399,6 @@ export default function LessonPage() {
         )}
 
       </main>
-    </div>
+    </PageTransition>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { useRouter, useSearchParams } from "next/navigation";
-import { KeyRound, ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 function VerifyContent() {
@@ -28,8 +28,16 @@ function VerifyContent() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "");
+    if (value.length <= 6) {
+      setOtp(value);
+      if (error) setError("");
+    }
+  };
+
   const handleResend = async () => {
-    if (!canResend) return;
+    if (!canResend || loading) return;
     setLoading(true);
     setError("");
     try {
@@ -37,6 +45,7 @@ function VerifyContent() {
       if (error) throw error;
       setCountdown(30);
       setCanResend(false);
+      setOtp("");
     } catch (err: any) {
       setError(err.message || "Failed to resend OTP.");
     } finally {
@@ -46,6 +55,8 @@ function VerifyContent() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (otp.length !== 6) return;
+    
     setLoading(true);
     setError("");
 
@@ -59,7 +70,6 @@ function VerifyContent() {
       if (error) throw error;
 
       if (data.user) {
-        // Check if user has finished onboarding
         const { data: profile } = await supabase
           .from("users")
           .select("goal")
@@ -79,25 +89,25 @@ function VerifyContent() {
     }
   };
 
+  const isButtonDisabled = otp.length !== 6 || loading;
+  const displayPhone = phone.startsWith("91") ? `+91 ${phone.slice(2, 7)} ${phone.slice(7)}` : phone;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-surface">
       <button 
         aria-label="Go back"
         onClick={() => router.back()}
-        className="absolute top-8 left-6 w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors"
+        className="absolute top-8 left-6 w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-purple/20"
       >
         <ArrowLeft className="w-6 h-6 text-brand-dark" />
       </button>
 
       <Card className="w-full max-w-md p-10 space-y-10 border-none shadow-float">
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 bg-brand-purple/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-brand-purple/20">
-            <KeyRound size={28} className="text-brand-purple" />
-          </div>
           <h1 className="text-3xl font-bold text-brand-dark tracking-tight leading-none">Verify Number</h1>
           <p className="text-muted font-medium text-sm">
             Enter the 6-digit code sent to <br/>
-            <span className="text-brand-dark font-bold mt-1 inline-block">{phone}</span>
+            <span className="text-brand-dark font-bold mt-1 inline-block">{displayPhone}</span>
           </p>
         </div>
         
@@ -106,34 +116,48 @@ function VerifyContent() {
             <label htmlFor="otp" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">OTP Code</label>
             <input
               id="otp"
-              type="text"
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="000000"
               maxLength={6}
-              className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] rounded-xl bg-white border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple outline-none transition-all text-brand-dark font-bold placeholder:text-gray-300 placeholder:tracking-normal"
+              className={`w-full px-4 py-4 text-center text-2xl tracking-[0.5em] rounded-xl bg-white border ${
+                error ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:ring-brand-purple/20 focus:border-brand-purple'
+              } focus:bg-white focus:ring-2 outline-none transition-all text-brand-dark font-bold placeholder:text-gray-300 placeholder:tracking-normal`}
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              onChange={handleOtpChange}
+              autoComplete="one-time-code"
               required
             />
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm font-medium hindi text-center">{error}</p>
+            <p className="text-red-500 text-xs font-medium hindi text-center animate-in fade-in slide-in-from-top-1">{error}</p>
           )}
 
-          <Button type="submit" className="w-full h-14 text-base shadow-sm bg-brand-purple hover:bg-brand-purple/90" isLoading={loading}>
+          <Button 
+            type="submit" 
+            className="w-full h-14 text-base shadow-sm bg-brand-purple hover:bg-brand-purple/90" 
+            isLoading={loading}
+            disabled={isButtonDisabled}
+          >
             Verify & Continue
             <ArrowRight size={18} className="ml-2" />
           </Button>
         </form>
 
-        <div className="text-center mt-4">
+        <div className="text-center space-y-4">
           <button 
             type="button"
             onClick={handleResend}
             disabled={!canResend || loading}
-            className="text-sm font-medium text-muted hover:text-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="text-sm font-bold text-muted hover:text-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none"
           >
-            {canResend ? "Resend OTP" : `Resend OTP in 0:${countdown.toString().padStart(2, '0')}`}
+            {canResend ? (
+              <span className="text-brand-purple">Resend OTP</span>
+            ) : (
+              `Resend OTP in 0:${countdown.toString().padStart(2, '0')}`
+            )}
           </button>
         </div>
       </Card>

@@ -10,6 +10,9 @@ import { createClient } from "@/lib/supabase/client";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+import PageTransition from "@/components/ui/PageTransition";
+import { Skeleton } from "@/components/ui/Skeleton";
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -71,7 +74,7 @@ export default function LessonsPage() {
     : lessons.filter(l => l.category === activeCategory);
 
   return (
-    <div className="flex flex-col gap-6 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <PageTransition className="flex flex-col gap-6 p-6 pb-24">
       {/* HEADER */}
       <header className="flex flex-col gap-4 pt-8">
         <div>
@@ -99,10 +102,10 @@ export default function LessonsPage() {
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={cn(
-              "px-5 py-2 rounded-pill text-[13px] font-bold transition-all whitespace-nowrap",
+              "px-5 py-2 rounded-pill text-[13px] font-bold transition-all whitespace-nowrap active:scale-95",
               activeCategory === cat
                 ? "bg-brand-orange text-white shadow-sm"
-                : "bg-white text-muted border border-gray-100"
+                : "bg-white text-muted border border-gray-100 hover:bg-gray-50"
             )}
           >
             {cat}
@@ -113,7 +116,17 @@ export default function LessonsPage() {
       {/* LESSON CARDS LIST */}
       <div className="flex flex-col gap-4">
         {loading ? (
-           <div className="py-10 text-center text-muted">Loading lessons...</div>
+           Array.from({ length: 5 }).map((_, i) => (
+             <Card key={i} className="p-4 border-none shadow-sm flex items-center gap-4">
+               <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
+               <div className="flex-1 space-y-2">
+                 <Skeleton className="h-3 w-16 rounded-full" />
+                 <Skeleton className="h-4 w-3/4 rounded-full" />
+                 <Skeleton className="h-3 w-1/2 rounded-full" />
+               </div>
+               <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+             </Card>
+           ))
         ) : (
           filteredLessons.map((lesson) => {
             const Icon = lesson.IconComponent;
@@ -143,7 +156,7 @@ export default function LessonsPage() {
                       >
                         {lesson.difficulty}
                       </span>
-                      <h3 className="font-bold text-[#1A1A2E] text-[15px] truncate">
+                      <h3 className="font-bold text-[#1A1A2E] text-[15px] truncate group-hover:text-brand-orange transition-colors">
                         {lesson.title}
                       </h3>
                       <p className="hindi text-muted italic text-[12px] mt-0.5 truncate">
@@ -157,7 +170,7 @@ export default function LessonsPage() {
                         <Clock size={12} strokeWidth={1.5} />
                         <span>{lesson.duration_mins}m</span>
                       </div>
-                      <ChevronRight size={18} strokeWidth={1.5} className="text-[#9B9BAE]" />
+                      <ChevronRight size={18} strokeWidth={1.5} className="text-[#9B9BAE] group-hover:text-brand-orange transition-colors group-hover:translate-x-0.5" />
                     </div>
                   </div>
 
@@ -177,6 +190,6 @@ export default function LessonsPage() {
           })
         )}
       </div>
-    </div>
+    </PageTransition>
   );
 }

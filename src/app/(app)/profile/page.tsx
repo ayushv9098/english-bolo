@@ -19,6 +19,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+import PageTransition from "@/components/ui/PageTransition";
+import { Skeleton } from "@/components/ui/Skeleton";
+
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
@@ -56,22 +59,51 @@ export default function ProfilePage() {
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
-    toast.success(darkMode ? "Light mode activated" : "Dark mode activated");
+    toast.success(darkMode ? "Light mode deactivated" : "Dark mode activated", {
+      icon: darkMode ? '☀️' : '🌙'
+    });
   };
 
   const toggleReminders = () => {
     setRemindersEnabled(!remindersEnabled);
-    toast.success(remindersEnabled ? "Reminders paused" : "Reminders enabled for 8:30 PM");
+    toast.success(remindersEnabled ? "Reminders paused" : "Reminders enabled for 8:30 PM", {
+      icon: remindersEnabled ? '🔕' : '🔔'
+    });
   };
 
-  if (!profile) return <div className="min-h-screen bg-surface flex items-center justify-center font-bold text-muted">Loading profile...</div>;
+  if (!profile) {
+    return (
+      <PageTransition className="flex flex-col gap-8 p-6 pb-24">
+        <section className="flex flex-col items-center text-center gap-4 mt-8">
+          <Skeleton className="w-24 h-24 rounded-full" />
+          <div className="flex flex-col items-center gap-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-40 rounded-pill" />
+          </div>
+        </section>
+        <section className="grid grid-cols-3 gap-3">
+          <Card className="p-4 border-none shadow-sm"><Skeleton className="h-16 w-full" /></Card>
+          <Card className="p-4 border-none shadow-sm"><Skeleton className="h-16 w-full" /></Card>
+          <Card className="p-4 border-none shadow-sm"><Skeleton className="h-16 w-full" /></Card>
+        </section>
+        <section className="flex flex-col gap-4">
+          <Skeleton className="h-4 w-20" />
+          <div className="flex flex-col gap-3">
+             <Card className="p-4 border-none shadow-sm"><Skeleton className="h-10 w-full" /></Card>
+             <Card className="p-4 border-none shadow-sm"><Skeleton className="h-10 w-full" /></Card>
+             <Card className="p-4 border-none shadow-sm"><Skeleton className="h-10 w-full" /></Card>
+          </div>
+        </section>
+      </PageTransition>
+    );
+  }
 
   const firstName = profile.name ? profile.name.split(" ")[0] : "Learner";
   const avatar = profile.avatar_emoji || "😎";
   const levelText = profile.level === "Bilkul nahi" ? "Beginner" : profile.level === "Thoda" ? "Elementary" : "Intermediate";
 
   return (
-    <div className="flex flex-col gap-8 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <PageTransition className="flex flex-col gap-8 p-6 pb-24">
       {/* PROFILE HEADER */}
       <section className="flex flex-col items-center text-center gap-4 mt-8">
         <div className="relative">
