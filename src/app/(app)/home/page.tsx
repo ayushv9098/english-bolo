@@ -20,6 +20,10 @@ export default async function HomePage() {
     .eq("id", user.id)
     .single();
 
+  if (!profile?.goal) {
+    redirect("/onboarding/goal");
+  }
+
   const { data: progress } = await supabase
     .from("user_progress")
     .select("lesson_id")
@@ -39,7 +43,7 @@ export default async function HomePage() {
   const avatar = profile?.avatar_emoji || "😎";
 
   return (
-    <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
+    <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       {/* TOP GREETING SECTION */}
       <header className="flex justify-between items-center pt-14 px-5 pb-3 bg-transparent">
         <h1 className="text-[28px] font-[800] text-[#1A1A2E] tracking-[-0.5px]">

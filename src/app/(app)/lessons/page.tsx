@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, ChevronRight, Clock, Coffee, MapPin, Briefcase, ShoppingBag, Hospital, Users, Sparkles } from "lucide-react";
 import Card from "@/components/ui/Card";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -16,6 +17,7 @@ function cn(...inputs: ClassValue[]) {
 const CATEGORIES = ["All", "Daily Life", "Travel", "Work"];
 
 export default function LessonsPage() {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("All");
   const [lessons, setLessons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,16 @@ export default function LessonsPage() {
   useEffect(() => {
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const { data: profile } = await supabase.from("users").select("goal").eq("id", user.id).single();
+      if (!profile?.goal) {
+        router.push("/onboarding/goal");
+        return;
+      }
 
       const { data: lessonsData } = await supabase.from("lessons").select("*").order("order_num");
       const { data: progressData } = await supabase.from("user_progress").select("*").eq("user_id", user.id);
@@ -53,14 +64,14 @@ export default function LessonsPage() {
       setLoading(false);
     }
     loadData();
-  }, []);
+  }, [router, supabase]);
 
   const filteredLessons = activeCategory === "All" 
     ? lessons 
     : lessons.filter(l => l.category === activeCategory);
 
   return (
-    <div className="flex flex-col gap-6 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-6 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* HEADER */}
       <header className="flex flex-col gap-4 pt-8">
         <div>

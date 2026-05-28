@@ -47,7 +47,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={isLoading || disabled}
         className={cn(
-          "inline-flex items-center justify-center transition-all focus:outline-none disabled:opacity-60 disabled:pointer-events-none",
+          "inline-flex items-center justify-center transition-all focus:outline-none disabled:opacity-60 disabled:pointer-events-none disabled:cursor-not-allowed",
           variants[variant],
           sizes[size],
           fullWidth ? "w-full" : "",

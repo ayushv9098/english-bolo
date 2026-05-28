@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 
 export async function createClient() {
   const cookieStore = await cookies();
+  console.log("cookieStore type:", typeof cookieStore);
+  console.log("cookieStore keys:", Object.keys(cookieStore));
+  console.log("cookieStore constructor:", cookieStore?.constructor?.name);
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

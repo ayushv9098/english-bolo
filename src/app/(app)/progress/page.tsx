@@ -46,6 +46,7 @@ const DEFAULT_BADGES = [
 ];
 
 export default function ProgressPage() {
+  const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ avgAccuracy: 0, totalDays: 1, streak: 0 });
@@ -55,9 +56,17 @@ export default function ProgressPage() {
   useEffect(() => {
     async function loadProgress() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-      const { data: profile } = await supabase.from("users").select("streak, created_at").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("users").select("goal, streak, created_at").eq("id", user.id).single();
+      if (!profile?.goal) {
+        router.push("/onboarding/goal");
+        return;
+      }
+
       const { data: progress } = await supabase.from("user_progress").select("pronunciation_score, completed_at").eq("user_id", user.id);
       
       let accuracy = 0;
@@ -105,12 +114,12 @@ export default function ProgressPage() {
       setLoading(false);
     }
     loadProgress();
-  }, []);
+  }, [router, supabase]);
 
   if (loading) return <div className="min-h-screen bg-surface p-10 flex items-center justify-center font-bold text-muted">Loading progress...</div>;
 
   return (
-    <div className="flex flex-col gap-6 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-6 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* HEADER */}
       <header className="pt-8">
         <h1 className="text-[28px] font-[800] text-brand-dark tracking-[-0.5px]">Activity</h1>

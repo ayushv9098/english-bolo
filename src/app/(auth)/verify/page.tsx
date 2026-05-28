@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,10 +11,38 @@ function VerifyContent() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [countdown, setCountdown] = useState(30);
+  const [canResend, setCanResend] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const phone = searchParams.get("phone") || "";
   const supabase = createClient();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else {
+      setCanResend(true);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const handleResend = async () => {
+    if (!canResend) return;
+    setLoading(true);
+    setError("");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ phone });
+      if (error) throw error;
+      setCountdown(30);
+      setCanResend(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to resend OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +82,7 @@ function VerifyContent() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-surface">
       <button 
+        aria-label="Go back"
         onClick={() => router.back()}
         className="absolute top-8 left-6 w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors"
       >
@@ -74,8 +103,9 @@ function VerifyContent() {
         
         <form onSubmit={handleVerify} className="space-y-6">
           <div className="space-y-2 text-left">
-            <label className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">OTP Code</label>
+            <label htmlFor="otp" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">OTP Code</label>
             <input
+              id="otp"
               type="text"
               placeholder="000000"
               maxLength={6}
@@ -95,6 +125,17 @@ function VerifyContent() {
             <ArrowRight size={18} className="ml-2" />
           </Button>
         </form>
+
+        <div className="text-center mt-4">
+          <button 
+            type="button"
+            onClick={handleResend}
+            disabled={!canResend || loading}
+            className="text-sm font-medium text-muted hover:text-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {canResend ? "Resend OTP" : `Resend OTP in 0:${countdown.toString().padStart(2, '0')}`}
+          </button>
+        </div>
       </Card>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Noto_Sans_Devanagari } from "next/font/google";
+import { Agentation } from "agentation";
 import "./globals.css";
 
 const baloo2 = Baloo_2({ 
@@ -37,6 +38,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${baloo2.variable} ${notoDevanagari.variable} font-sans`}>
         {children}
+        <Agentation />
       </body>
     </html>
   );

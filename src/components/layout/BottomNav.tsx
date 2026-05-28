@@ -13,6 +13,8 @@ function cn(...inputs: ClassValue[]) {
 export default function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname.startsWith("/lesson/")) return null;
+
   const navItems = [
     { label: "Home", icon: Home, href: "/home" },
     { label: "Lessons", icon: BookOpen, href: "/lessons" },

@@ -133,7 +133,12 @@ export default function LessonPage() {
   };
 
   const handleNextStep = () => {
-    if (step < 5) setStep(step + 1);
+    if (step < 5) {
+      setStep(step + 1);
+      if (step + 1 === 5 && typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([100]);
+      }
+    }
   };
 
   const handleFinish = async () => {

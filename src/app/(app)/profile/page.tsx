@@ -26,16 +26,24 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from("users").select("*").eq("id", user.id).single();
-        const { count } = await supabase.from("user_progress").select("*", { count: 'exact', head: true }).eq("user_id", user.id);
-        
-        setProfile(data);
-        setLessonsCount(count || 0);
+      if (!user) {
+        router.push("/login");
+        return;
       }
+
+      const { data } = await supabase.from("users").select("*").eq("id", user.id).single();
+      if (!data?.goal) {
+        router.push("/onboarding/goal");
+        return;
+      }
+      
+      const { count } = await supabase.from("user_progress").select("*", { count: 'exact', head: true }).eq("user_id", user.id);
+      
+      setProfile(data);
+      setLessonsCount(count || 0);
     }
     loadProfile();
-  }, [supabase]);
+  }, [router, supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -49,7 +57,7 @@ export default function ProfilePage() {
   const levelText = profile.level === "Bilkul nahi" ? "Beginner" : profile.level === "Thoda" ? "Elementary" : "Intermediate";
 
   return (
-    <div className="flex flex-col gap-8 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-8 p-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* PROFILE HEADER */}
       <section className="flex flex-col items-center text-center gap-4 mt-8">
         <div className="relative">

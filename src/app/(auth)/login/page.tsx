@@ -63,10 +63,11 @@ export default function LoginPage() {
         
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2 text-left">
-            <label className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">Phone Number</label>
+            <label htmlFor="phone" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">Phone Number</label>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
               <input
+                id="phone"
                 type="tel"
                 placeholder="+91 00000 00000"
                 className="w-full pl-12 pr-4 py-4 rounded-xl bg-white border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium placeholder:text-gray-300"
