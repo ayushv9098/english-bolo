@@ -1,26 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-brand-orange: #FF6B35;
+  --color-brand-purple: #6C63FF;
+  --color-brand-dark: #1A1A2E;
+  --color-surface: #FDF6F0;
+  --color-muted: #9B9BAE;
+
+  --radius-card: 24px;
+  --radius-btn: 16px;
+  --radius-pill: 50px;
+  --radius-xl: 20px;
+
+  --shadow-card: 0 2px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+  --shadow-float: 0 8px 32px rgba(0,0,0,0.10);
+
+  --font-hindi: "Noto Sans Devanagari", sans-serif;
+  --font-sans: "Inter", sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    @apply bg-surface text-brand-dark antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-orange/40 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-orange/60;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .hindi {
+    font-family: var(--font-hindi);
+  }
+
+  .card {
+    @apply bg-white rounded-card shadow-card p-5;
+  }
+
+  .btn-primary {
+    @apply bg-brand-orange text-white rounded-btn font-semibold px-6 py-3.5 transition-all active:scale-[0.98] shadow-sm;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-brand-orange border-[1.5px] border-brand-orange rounded-btn font-semibold px-6 py-3.5 transition-all active:scale-[0.98];
+  }
+
+  .badge {
+    @apply rounded-pill text-xs px-3 py-1 font-medium;
+  }
 }
