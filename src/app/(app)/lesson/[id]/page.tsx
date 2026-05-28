@@ -121,7 +121,7 @@ export default function LessonPage() {
      const spokenWords = spoken.split(" ");
      
      let match = 0;
-     expectedWords.forEach(w => {
+     expectedWords.forEach((w: string) => {
        if (spokenWords.includes(w)) match++;
      });
      
