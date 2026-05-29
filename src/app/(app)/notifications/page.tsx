@@ -36,6 +36,14 @@ export default function NotificationsPage() {
             <span className="text-[10px] font-bold text-brand-orange uppercase tracking-wider mt-3 block">Just now</span>
           </div>
         </Card>
+
+        <Button 
+          variant="soft" 
+          className="mt-6 py-4 rounded-pill font-bold"
+          onClick={() => router.push("/home")}
+        >
+          Go Back to Dashboard
+        </Button>
       </main>
     </div>
   );

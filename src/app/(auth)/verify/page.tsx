@@ -6,6 +6,8 @@ import Card from "@/components/ui/Card";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { handleAuthError } from "@/lib/error-handler";
+import toast from "react-hot-toast";
 
 function VerifyContent() {
   const [otp, setOtp] = useState("");
@@ -28,6 +30,13 @@ function VerifyContent() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  useEffect(() => {
+    if (!phone) {
+      toast.error("Phone number missing. Please start again.");
+      router.push("/login");
+    }
+  }, [phone, router]);
+
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "");
     if (value.length <= 6) {
@@ -38,16 +47,24 @@ function VerifyContent() {
 
   const handleResend = async () => {
     if (!canResend || loading) return;
+    
+    if (!navigator.onLine) {
+      handleAuthError(new Error("NetworkError"), setError);
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) throw error;
+      
+      toast.success("OTP sent again!");
       setCountdown(30);
       setCanResend(false);
       setOtp("");
     } catch (err: any) {
-      setError(err.message || "Failed to resend OTP.");
+      handleAuthError(err, setError);
     } finally {
       setLoading(false);
     }
@@ -55,8 +72,18 @@ function VerifyContent() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 6) return;
+    if (otp.length !== 6) {
+      const msg = "Please enter the 6-digit OTP.";
+      setError(msg);
+      toast.error(msg, { id: "validation-error" });
+      return;
+    }
     
+    if (!navigator.onLine) {
+      handleAuthError(new Error("NetworkError"), setError);
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -68,6 +95,8 @@ function VerifyContent() {
       });
 
       if (error) throw error;
+
+      toast.success("Login successful!");
 
       if (data.user) {
         const { data: profile } = await supabase
@@ -83,7 +112,7 @@ function VerifyContent() {
         }
       }
     } catch (err: any) {
-      setError(err.message || "OTP galat hai. Phir se try karein.");
+      handleAuthError(err, setError);
     } finally {
       setLoading(false);
     }
@@ -97,7 +126,8 @@ function VerifyContent() {
       <button 
         aria-label="Go back"
         onClick={() => router.back()}
-        className="absolute top-8 left-6 w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-purple/20"
+        disabled={loading}
+        className="absolute top-8 left-6 w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-purple/20 disabled:opacity-50"
       >
         <ArrowLeft className="w-6 h-6 text-brand-dark" />
       </button>
@@ -111,7 +141,7 @@ function VerifyContent() {
           </p>
         </div>
         
-        <form onSubmit={handleVerify} className="space-y-6">
+        <form onSubmit={handleVerify} className="space-y-6" noValidate>
           <div className="space-y-2 text-left">
             <label htmlFor="otp" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">OTP Code</label>
             <input
@@ -122,17 +152,18 @@ function VerifyContent() {
               placeholder="000000"
               maxLength={6}
               className={`w-full px-4 py-4 text-center text-2xl tracking-[0.5em] rounded-xl bg-white border ${
-                error ? 'border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:ring-brand-purple/20 focus:border-brand-purple'
+                error ? 'border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:ring-brand-purple/20 focus:border-brand-purple'
               } focus:bg-white focus:ring-2 outline-none transition-all text-brand-dark font-bold placeholder:text-gray-300 placeholder:tracking-normal`}
               value={otp}
               onChange={handleOtpChange}
               autoComplete="one-time-code"
+              disabled={loading}
               required
             />
           </div>
 
           {error && (
-            <p className="text-red-500 text-xs font-medium hindi text-center animate-in fade-in slide-in-from-top-1">{error}</p>
+            <p className="text-red-500 text-sm font-medium hindi text-center animate-in fade-in slide-in-from-top-1">{error}</p>
           )}
 
           <Button 

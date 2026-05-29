@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import { Zap, Calendar, CheckCircle2, Lock, MessageSquare, Flame as FlameIcon, Star as StarIcon, Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import PageTransition from "@/components/ui/PageTransition";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -56,6 +56,14 @@ export default function ProgressPage() {
   const [stats, setStats] = useState({ avgAccuracy: 0, totalDays: 1, streak: 0 });
   const [badges, setBadges] = useState(DEFAULT_BADGES);
   const [xpData, setXpData] = useState([0, 0, 0, 0, 0, 0, 0]);
+
+  const handleBadgeClick = (badge: any) => {
+    if (badge.status === "earned") {
+      toast.success(`You earned this! ${badge.desc}`, { icon: badge.iconName === 'flame' ? '🔥' : '⭐' });
+    } else {
+      toast.error(`Locked: ${badge.desc}`, { icon: '🔒' });
+    }
+  };
 
   useEffect(() => {
     async function loadProgress() {
@@ -247,6 +255,7 @@ export default function ProgressPage() {
             return (
               <Card
                 key={badge.id}
+                onClick={() => handleBadgeClick(badge)}
                 className={`p-4 flex flex-col items-center text-center gap-2 border-none transition-all shadow-sm hover:-translate-y-1 hover:shadow-md cursor-pointer ${
                   badge.status === "locked" ? "opacity-50 grayscale hover:grayscale-0 hover:opacity-100" : ""
                 }`}

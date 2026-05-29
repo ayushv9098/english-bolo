@@ -29,6 +29,7 @@ export default function ProfilePage() {
   const [lessonsCount, setLessonsCount] = useState(0);
   const [darkMode, setDarkMode] = useState(false);
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -53,13 +54,22 @@ export default function ProfilePage() {
   }, [router, supabase]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      await supabase.auth.signOut();
+      toast.success("Signed out successfully");
+      router.push("/login");
+    } catch (err) {
+      toast.error("Failed to sign out");
+    }
+  };
+
+  const confirmSignOut = () => {
+    setShowSignOutConfirm(true);
   };
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
-    toast.success(darkMode ? "Light mode deactivated" : "Dark mode activated", {
+    toast.success(darkMode ? "Light mode activated" : "Dark mode activated", {
       icon: darkMode ? '☀️' : '🌙'
     });
   };
@@ -207,11 +217,42 @@ export default function ProfilePage() {
         variant="ghost" 
         className="mt-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 gap-2 font-bold py-4 rounded-pill bg-white active:scale-95"
         fullWidth
-        onClick={handleSignOut}
+        onClick={confirmSignOut}
       >
         <LogOut size={18} strokeWidth={2} />
         Sign Out
       </Button>
-    </div>
+
+      {/* SIGN OUT CONFIRMATION MODAL */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <Card className="w-full max-w-xs p-6 space-y-6 border-none shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <LogOut size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-brand-dark">Sign Out?</h3>
+              <p className="text-sm text-muted px-2">Are you sure you want to sign out from AngreziBolo? You will need to sign in again to continue.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button 
+                variant="primary" 
+                className="bg-red-500 hover:bg-red-600 text-white border-none h-12 font-bold"
+                onClick={handleSignOut}
+              >
+                Yes, Sign Out
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="border-none text-muted hover:bg-gray-50 h-12 font-semibold"
+                onClick={() => setShowSignOutConfirm(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </PageTransition>
   );
 }
