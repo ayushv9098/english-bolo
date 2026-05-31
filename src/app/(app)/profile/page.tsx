@@ -26,7 +26,8 @@ import {
   Trash2,
   AlertTriangle,
   ArrowLeft,
-  Pencil
+  Pencil,
+  Check
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -37,51 +38,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useGamification } from "@/context/GamificationContext";
 import { ProgressBar } from "@/components/gamification/ProgressBar";
 import { cn } from "@/lib/utils";
-
-// Avatar Sprite Sheet Mapping (8 columns, 4 rows of content)
-const AVATAR_MAP: Record<string, { x: number, y: number }> = {
-  "G01": { x: 0, y: 0 }, "G02": { x: 1, y: 0 }, "G03": { x: 2, y: 0 }, "G04": { x: 3, y: 0 }, "G05": { x: 4, y: 0 }, "G06": { x: 5, y: 0 }, "G07": { x: 6, y: 0 }, "G10": { x: 7, y: 0 },
-  "G11": { x: 0, y: 1 }, "G12": { x: 1, y: 1 }, "G13": { x: 2, y: 1 }, "G14": { x: 3, y: 1 }, "G17": { x: 4, y: 1 }, "G18": { x: 5, y: 1 }, "G19": { x: 6, y: 1 }, "G20": { x: 7, y: 1 },
-  "B01": { x: 0, y: 2 }, "B02": { x: 1, y: 2 }, "B03": { x: 2, y: 2 }, "B04": { x: 3, y: 2 }, "B05": { x: 4, y: 2 }, "B06": { x: 5, y: 2 }, "B17": { x: 6, y: 2 }, "B18": { x: 7, y: 2 },
-  "B11": { x: 0, y: 3 }, "B12": { x: 1, y: 3 }, "B13": { x: 2, y: 3 }, "B14": { x: 3, y: 3 }, "B15": { x: 4, y: 3 }, "B16": { x: 5, y: 3 }, "B19": { x: 6, y: 3 }, "B20": { x: 7, y: 3 },
-};
-
-const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
-
-function UserAvatar({ id, className = "" }: { id: string, className?: string }) {
-  const pos = AVATAR_MAP[id];
-  
-  if (!pos) {
-    return <span className={cn("flex items-center justify-center bg-gray-50", className)}>{id || "😎"}</span>;
-  }
-
-  // Calibration to give more "breathing room" (less cramped)
-  const xPercent = (pos.x * 100) / 7;
-  
-  // Slightly adjusted offsets for more space around the head
-  const yOffsets = [28, 49, 74, 95];
-  const yPercent = yOffsets[pos.y];
-
-  return (
-    <div 
-      className={cn("overflow-hidden bg-white flex items-center justify-center relative", className)}
-    >
-      <div 
-        style={{
-          backgroundImage: `url('/avatars/bundle.png')`,
-          backgroundSize: '950% 600%', // Reduced zoom for breathing room
-          backgroundPosition: `${xPercent}% ${yPercent}%`,
-          backgroundRepeat: 'no-repeat',
-          width: '100%',
-          height: '100%',
-          imageRendering: 'auto',
-        }}
-      />
-      {/* Subtle overlay to soften edges */}
-      <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-full pointer-events-none" />
-    </div>
-  );
-}
+import { UserAvatar, AVATAR_OPTIONS } from "@/components/ui/UserAvatar";
 
 const UNLOCK_ROADMAP = [
   { xp: 500, title: "AI Hint Tokens ×5", desc: "Get 5 free hints for tough missions.", icon: "💡" },
@@ -357,10 +314,13 @@ export default function ProfilePage() {
             <div className="text-center space-y-3">
               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-2"><AlertTriangle size={32} /></div>
               <h3 className="text-xl font-black text-brand-dark">Are you sure?</h3>
-              <p className="text-sm text-muted">Type <span className="text-red-500 font-bold uppercase">DELETE</span> to confirm.</p>
+              <p className="text-sm text-muted leading-relaxed">Account delete karna <b>permanent</b> hai. Aapka XP aur progress hamesha ke liye khatam ho jayega.</p>
             </div>
             <div className="space-y-4">
-              <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())} placeholder="Type here..." className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center font-bold focus:ring-2 focus:ring-red-500/20 outline-none" />
+              <div className="space-y-1">
+                 <p className="text-[10px] font-black text-brand-dark/30 uppercase tracking-widest text-center">Type <span className="text-red-500">DELETE</span> to confirm</p>
+                 <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())} placeholder="Type here..." className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center font-bold focus:ring-2 focus:ring-red-500/20 outline-none" />
+              </div>
               <div className="flex flex-col gap-2">
                 <Button disabled={deleteConfirmText !== "DELETE"} className={cn("h-12 font-black border-none text-white", deleteConfirmText === "DELETE" ? "bg-red-500 shadow-lg shadow-red-200" : "bg-gray-200 text-gray-400")} onClick={handleDeleteAccount}>DELETE MY ACCOUNT</Button>
                 <Button variant="ghost" className="border-none text-muted h-10 font-bold" onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}>Cancel</Button>
@@ -376,7 +336,7 @@ export default function ProfilePage() {
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-slate-50 text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4"><LogOut size={24} /></div>
               <h3 className="text-lg font-bold text-brand-dark">Sign Out?</h3>
-              <p className="text-sm text-muted px-2">Are you sure you want to sign out?</p>
+              <p className="text-sm text-muted px-2">Are you sure you want to sign out from AngreziBolo?</p>
             </div>
             <div className="flex flex-col gap-2">
               <Button variant="primary" className="bg-brand-dark text-white border-none h-12 font-bold w-full" onClick={handleSignOut}>Yes, Sign Out</Button>
@@ -438,7 +398,7 @@ export default function ProfilePage() {
                     <span className="text-[10px] font-bold text-red-400/50 uppercase tracking-tight">Remove all data</span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-red-500/20" />
+                <ChevronRight size={18} className="text-brand-dark/20" />
               </button>
             </div>
           </Card>

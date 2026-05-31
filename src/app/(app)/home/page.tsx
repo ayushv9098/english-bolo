@@ -10,6 +10,7 @@ import { GamificationDashboard } from "@/components/gamification/GamificationDas
 import { HomeChecklist } from "@/components/home/HomeChecklist";
 import { HomeGamesRow } from "@/components/home/HomeGamesRow";
 import DailyLessonCard from "@/components/DailyLessonCard";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -85,13 +86,7 @@ export default async function HomePage() {
           </Link>
 
           <Link href="/profile">
-            <div className="w-[42px] h-[42px] rounded-2xl bg-white flex items-center justify-center text-[22px] font-bold shadow-card border-2 border-white ring-4 ring-brand-orange/5 overflow-hidden active:scale-90 transition-all duration-300">
-              {isAvatarUrl ? (
-                <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <span className="drop-shadow-sm">{avatar}</span>
-              )}
-            </div>
+            <UserAvatar id={profile?.avatar_emoji || "G01"} className="w-[42px] h-[42px] rounded-2xl shadow-card border-2 border-white ring-4 ring-brand-orange/5 active:scale-90 transition-all duration-300" />
           </Link>
         </div>
       </header>
