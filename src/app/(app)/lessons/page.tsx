@@ -228,7 +228,7 @@ export default function LessonsPage() {
                     <div className="pt-0.5">
                       <ProgressBar
                         value={lesson.progress}
-                        size="xs"
+                        size="sm"
                         color={isCompleted ? "green" : "orange"}
                       />
                     </div>
