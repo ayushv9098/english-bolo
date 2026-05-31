@@ -10,8 +10,8 @@ function cn(...inputs: ClassValue[]) {
 
 export interface ProgressBarProps {
   value: number;
-  color?: "orange" | "purple" | "green";
-  size?: "sm" | "md" | "lg";
+  color?: "orange" | "purple" | "green" | "white";
+  size?: "xs" | "sm" | "md" | "lg";
   className?: string;
   showValue?: boolean;
 }
@@ -37,9 +37,11 @@ export default function ProgressBar({
     orange: "bg-brand-orange",
     purple: "bg-brand-purple",
     green: "bg-green-500",
+    white: "bg-white",
   };
 
   const heights = {
+    xs: "h-0.5",
     sm: "h-1",
     md: "h-2",
     lg: "h-3",
@@ -54,7 +56,7 @@ export default function ProgressBar({
       </div>
       <div
         className={cn(
-          "w-full bg-[#F0EBF8] rounded-full overflow-hidden",
+          "w-full bg-[#F0EBF8]/50 rounded-full overflow-hidden",
           heights[size]
         )}
       >

@@ -24,13 +24,10 @@ export default async function HomePage() {
   startOfToday.setHours(0, 0, 0, 0);
   const startOfTodayIso = startOfToday.toISOString();
 
-  // Parallel data fetching
-  const [profileRes, progressRes, lessonToday, gameToday, speakingToday] = await Promise.all([
+  // 1. First batch of core data to determine next lesson
+  const [profileRes, progressRes] = await Promise.all([
     supabase.from("users").select("name, streak, xp_points, avatar_emoji, goal").eq("id", user.id).single(),
     supabase.from("user_progress").select("lesson_id").eq("user_id", user.id),
-    supabase.from('user_progress').select('id', { count: 'exact' }).eq('user_id', user.id).gte('completed_at', startOfTodayIso),
-    supabase.from('game_sessions').select('id', { count: 'exact' }).eq('user_id', user.id).gte('created_at', startOfTodayIso),
-    supabase.from('speaking_sessions').select('id', { count: 'exact' }).eq('user_id', user.id).gte('created_at', startOfTodayIso),
   ]);
 
   const profile = profileRes.data;
@@ -41,25 +38,28 @@ export default async function HomePage() {
   }
 
   const completedIds = progress?.map((p: any) => p.lesson_id) || [];
+  
+  // 2. Optimized Parallel Fetching for all remaining dashboard data
+  const [nextLessonsRes, lessonToday, gameToday, speakingToday, notifRes] = await Promise.all([
+    // Next Lesson Query
+    completedIds.length > 0 
+      ? supabase.from("lessons").select("*").not('id', 'in', `(${completedIds.join(',')})`).order("order_num", { ascending: true }).limit(1)
+      : supabase.from("lessons").select("*").order("order_num", { ascending: true }).limit(1),
+    
+    // Counts for checklist
+    supabase.from('user_progress').select('id', { count: 'exact' }).eq('user_id', user.id).gte('completed_at', startOfTodayIso),
+    supabase.from('game_sessions').select('id', { count: 'exact' }).eq('user_id', user.id).gte('created_at', startOfTodayIso),
+    supabase.from('speaking_sessions').select('id', { count: 'exact' }).eq('user_id', user.id).gte('created_at', startOfTodayIso),
+    
+    // Notification count
+    supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false)
+  ]);
 
-  let query = supabase.from("lessons").select("*").order("order_num", { ascending: true }).limit(1);
-  if (completedIds.length > 0) {
-     query = query.not('id', 'in', `(${completedIds.join(',')})`);
-  }
-
-  const { data: nextLessons } = await query;
-  const nextLesson = nextLessons?.[0];
+  const nextLesson = nextLessonsRes.data?.[0];
+  const notificationCount = notifRes.count;
 
   const firstName = profile?.name ? profile.name.split(" ")[0] : "Learner";
-  const avatar = profile?.avatar_emoji || "😎";
-  const isAvatarUrl = avatar.startsWith("http");
-
-  // Fetch notification count (Placeholder for real notifications table if it exists)
-  const { count: notificationCount } = await supabase
-    .from('notifications')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('is_read', false);
+  const avatarId = profile?.avatar_emoji || "G01";
 
   return (
     <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
