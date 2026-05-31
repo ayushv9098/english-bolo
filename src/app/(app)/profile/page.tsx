@@ -19,6 +19,7 @@ import {
   BarChart2,
   ChevronRight,
   Lock,
+  Check as CheckIcon,
   Store,
   Key,
   Database,
@@ -37,7 +38,7 @@ import { useGamification } from "@/context/GamificationContext";
 import { ProgressBar } from "@/components/gamification/ProgressBar";
 import { cn } from "@/lib/utils";
 
-// Avatar Sprite Sheet Mapping (8 columns, 4 rows)
+// Avatar Sprite Sheet Mapping (8 columns, 4 rows of content)
 const AVATAR_MAP: Record<string, { x: number, y: number }> = {
   "G01": { x: 0, y: 0 }, "G02": { x: 1, y: 0 }, "G03": { x: 2, y: 0 }, "G04": { x: 3, y: 0 }, "G05": { x: 4, y: 0 }, "G06": { x: 5, y: 0 }, "G07": { x: 6, y: 0 }, "G10": { x: 7, y: 0 },
   "G11": { x: 0, y: 1 }, "G12": { x: 1, y: 1 }, "G13": { x: 2, y: 1 }, "G14": { x: 3, y: 1 }, "G17": { x: 4, y: 1 }, "G18": { x: 5, y: 1 }, "G19": { x: 6, y: 1 }, "G20": { x: 7, y: 1 },
@@ -51,24 +52,33 @@ function UserAvatar({ id, className = "" }: { id: string, className?: string }) 
   const pos = AVATAR_MAP[id];
   
   if (!pos) {
-    // Fallback to emoji if it's not a sprite ID
-    return <span className={cn("flex items-center justify-center", className)}>{id || "😎"}</span>;
+    return <span className={cn("flex items-center justify-center bg-gray-50", className)}>{id || "😎"}</span>;
   }
 
-  // The sprite sheet has 8 columns and 4 rows. 
-  // We add a small offset to skip the labels and header area.
+  // Calibration to give more "breathing room" (less cramped)
+  const xPercent = (pos.x * 100) / 7;
+  
+  // Slightly adjusted offsets for more space around the head
+  const yOffsets = [28, 49, 74, 95];
+  const yPercent = yOffsets[pos.y];
+
   return (
-    <div className={cn("overflow-hidden bg-gray-50 flex items-center justify-center", className)}>
+    <div 
+      className={cn("overflow-hidden bg-white flex items-center justify-center relative", className)}
+    >
       <div 
         style={{
           backgroundImage: `url('/avatars/bundle.png')`,
-          backgroundSize: '800% 500%', // 8 columns, ~5 rows worth of height to account for header
-          backgroundPosition: `${(pos.x * 100) / 7}% ${(pos.y * 100) / 3.4 + 16}%`, // Calibrated for the bundle layout
+          backgroundSize: '950% 600%', // Reduced zoom for breathing room
+          backgroundPosition: `${xPercent}% ${yPercent}%`,
+          backgroundRepeat: 'no-repeat',
           width: '100%',
           height: '100%',
-          backgroundRepeat: 'no-repeat'
+          imageRendering: 'auto',
         }}
       />
+      {/* Subtle overlay to soften edges */}
+      <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-full pointer-events-none" />
     </div>
   );
 }
@@ -272,7 +282,7 @@ export default function ProfilePage() {
                       {editAvatar === id && (
                         <div className="absolute inset-0 bg-brand-orange/10 flex items-center justify-center">
                            <div className="bg-brand-orange text-white rounded-full p-0.5">
-                             <Check size={10} strokeWidth={4} />
+                             <CheckIcon size={10} strokeWidth={4} />
                            </div>
                         </div>
                       )}
