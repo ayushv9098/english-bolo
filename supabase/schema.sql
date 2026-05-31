@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
   id UUID REFERENCES auth.users PRIMARY KEY,
   phone TEXT UNIQUE,
+  email TEXT UNIQUE,
   name TEXT,
   goal TEXT,
   level TEXT,
@@ -24,8 +25,24 @@ CREATE TABLE users (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.users (id, phone)
-  VALUES (new.id, new.phone);
+  INSERT INTO public.users (
+    id,
+    phone,
+    email,
+    name
+  )
+  VALUES (
+    new.id,
+    new.phone,
+    new.email,
+    COALESCE(
+      new.raw_user_meta_data->>'full_name',
+      new.raw_user_meta_data->>'name',
+      ''
+    )
+  )
+  ON CONFLICT (id) DO NOTHING;
+
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

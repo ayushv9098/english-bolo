@@ -9,16 +9,25 @@ export type AppError = {
 export const parseAuthError = (error: any): string => {
   if (!error) return "An unexpected error occurred. Please try again.";
 
+  // Log for debugging
+  console.error("Auth Error Object:", error);
+
   // Handle network/connection errors
-  if (!navigator.onLine || error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
+  if (typeof window !== "undefined" && !navigator.onLine) {
     return "Check your internet connection and try again.";
   }
 
   const msg = error.message?.toLowerCase() || "";
 
   // Supabase specific error messages mapping
-  if (msg.includes("invalid login credentials") || msg.includes("invalid otp") || msg.includes("token expired")) {
-    return "The OTP entered is incorrect or has expired.";
+  if (msg.includes("invalid login credentials") || msg.includes("invalid_grant")) {
+    return "Invalid email, phone, or password. Please try again.";
+  }
+  if (msg.includes("email not confirmed")) {
+    return "Please confirm your email address before logging in.";
+  }
+  if (msg.includes("invalid otp") || msg.includes("token expired")) {
+    return "The code entered is incorrect or has expired.";
   }
   if (msg.includes("too many requests") || msg.includes("rate limit")) {
     return "Too many attempts. Please try again later.";

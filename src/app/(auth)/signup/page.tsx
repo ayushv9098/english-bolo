@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Phone, Mail, Lock, User, ArrowRight, Eye, EyeOff, Check, X, ShieldCheck } from "lucide-react";
+import { Phone, Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -22,7 +22,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -44,13 +43,8 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-    
     if (!passwordValidations.length || !passwordValidations.number) {
-      toast.error("Please follow password requirements");
+      toast.error("Please follow password requirements (min 8 characters with a number)");
       return;
     }
 
@@ -77,10 +71,13 @@ export default function SignupPage() {
       if (error) throw error;
 
       if (data.user) {
-        toast.success("Account created successfully!");
-        // If email confirmation is enabled, they might need to check email.
-        // For now, redirect to onboarding.
-        router.push("/onboarding/goal");
+        if (method === "email" && !data.session) {
+          toast.success("Verification link sent! Please check your email.", { duration: 6000 });
+          router.push("/login");
+        } else {
+          toast.success("Account created successfully!");
+          router.push("/onboarding/goal");
+        }
       }
     } catch (err: any) {
       handleAuthError(err);
@@ -89,51 +86,49 @@ export default function SignupPage() {
     }
   };
 
-  const isFormValid = name.length > 0 && 
-    (method === "email" ? email.includes("@") : phone.length === 10) &&
+  const isFormValid = (method === "email" ? email.includes("@") : phone.length === 10) &&
     passwordValidations.length && 
-    passwordValidations.number &&
-    password === confirmPassword;
+    passwordValidations.number;
 
   return (
     <PageTransition className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface">
-      <Card className="w-full max-w-md p-8 sm:p-10 space-y-8 border-none shadow-float overflow-hidden">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-[900] text-brand-dark tracking-tighter leading-none">Create Account</h1>
-          <p className="text-muted font-medium text-sm">Join AngreziBolo to start learning</p>
+      <Card className="w-full max-w-md p-6 sm:p-8 space-y-6 border-none shadow-float overflow-hidden">
+        <div className="text-center space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-dark tracking-tight leading-none">Create Account</h1>
+          <p className="text-muted font-medium text-[13px]">Join AngreziBolo to start learning</p>
         </div>
 
         {/* Toggle Method */}
-        <div className="flex p-1 bg-gray-50 rounded-xl">
+        <div className="flex p-0.5 bg-gray-50 rounded-lg">
           <button
             onClick={() => setSignupMethod("email")}
-            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-              method === "email" ? "bg-white text-brand-dark shadow-sm" : "text-muted"
+            className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${
+              method === "email" ? "bg-white text-brand-dark shadow-sm" : "text-muted hover:text-brand-dark/70"
             }`}
           >
             Email
           </button>
           <button
             onClick={() => setSignupMethod("phone")}
-            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-              method === "phone" ? "bg-white text-brand-dark shadow-sm" : "text-muted"
+            className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${
+              method === "phone" ? "bg-white text-brand-dark shadow-sm" : "text-muted hover:text-brand-dark/70"
             }`}
           >
             Phone
           </button>
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-4 animate-in fade-in duration-300">
+        <form onSubmit={handleSignup} className="space-y-4">
           {/* Name Field */}
-          <div className="space-y-1.5">
-            <label htmlFor="name" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">Full Name (Optional)</label>
+          <div className="space-y-1">
+            <label htmlFor="name" className="text-[9px] font-bold text-muted uppercase tracking-widest ml-1">Full Name (Optional)</label>
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
               <input
                 id="name"
                 type="text"
                 placeholder="Rahul Sharma"
-                className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium placeholder:text-gray-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-semibold text-sm placeholder:text-gray-300"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -141,19 +136,19 @@ export default function SignupPage() {
           </div>
 
           {/* Email/Phone Field */}
-          <div className="space-y-1.5">
-            <label htmlFor="identifier" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">
+          <div className="space-y-1">
+            <label htmlFor="identifier" className="text-[9px] font-bold text-muted uppercase tracking-widest ml-1">
               {method === "email" ? "Email Address" : "Phone Number"}
             </label>
             <div className="relative">
               {method === "email" ? (
                 <>
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
                   <input
                     id="identifier"
                     type="email"
                     placeholder="name@example.com"
-                    className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium placeholder:text-gray-300"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-semibold text-sm placeholder:text-gray-300"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -161,14 +156,14 @@ export default function SignupPage() {
                 </>
               ) : (
                 <>
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                  <div className="absolute left-11 top-1/2 -translate-y-1/2 font-bold text-brand-dark text-sm">+91</div>
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
+                  <div className="absolute left-[2.5rem] top-1/2 -translate-y-1/2 font-bold text-brand-dark text-sm">+91</div>
                   <input
                     id="identifier"
                     type="tel"
                     placeholder="00000 00000"
                     maxLength={10}
-                    className="w-full pl-20 pr-4 py-3.5 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium tracking-wider placeholder:text-gray-300 placeholder:tracking-normal"
+                    className="w-full pl-[4.5rem] pr-4 py-2.5 rounded-lg bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-semibold text-sm tracking-wider placeholder:text-gray-300 placeholder:tracking-normal"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                     required
@@ -179,15 +174,15 @@ export default function SignupPage() {
           </div>
 
           {/* Password Field */}
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">Create Password</label>
+          <div className="space-y-1">
+            <label htmlFor="password" className="text-[9px] font-bold text-muted uppercase tracking-widest ml-1">Create Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
-                className="w-full pl-12 pr-12 py-3.5 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium"
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-semibold text-sm"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -195,59 +190,21 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-brand-dark transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-brand-dark transition-colors"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
-            </div>
-          </div>
-
-          {/* Password Strength Indicators */}
-          <div className="flex gap-2 px-1">
-            {[
-              { key: 'length', label: '8+ chars' },
-              { key: 'number', label: 'Number' },
-              { key: 'special', label: 'Symbol' }
-            ].map((rule) => (
-              <div 
-                key={rule.key}
-                className={`flex items-center gap-1 text-[9px] font-bold uppercase transition-colors ${
-                  passwordValidations[rule.key as keyof typeof passwordValidations] ? "text-green-500" : "text-gray-300"
-                }`}
-              >
-                {passwordValidations[rule.key as keyof typeof passwordValidations] ? <Check size={10} strokeWidth={3} /> : <div className="w-2.5 h-2.5" />}
-                {rule.label}
-              </div>
-            ))}
-          </div>
-
-          {/* Confirm Password */}
-          <div className="space-y-1.5 pt-1">
-            <label htmlFor="confirmPassword" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">Confirm Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-              <input
-                id="confirmPassword"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                className={`w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border ${
-                  confirmPassword && password !== confirmPassword ? 'border-red-200' : 'border-gray-100'
-                } focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium`}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
             </div>
           </div>
 
           <Button 
             type="submit" 
-            className="w-full h-14 text-base shadow-sm font-bold mt-4" 
+            className="w-full h-11 text-sm shadow-sm font-bold mt-2 rounded-lg" 
             isLoading={loading}
             disabled={!isFormValid || loading}
           >
             Create Account
-            <ArrowRight size={18} className="ml-2" />
+            <ArrowRight size={16} className="ml-2" />
           </Button>
         </form>
 
@@ -255,14 +212,15 @@ export default function SignupPage() {
           <p className="text-sm text-muted">
             Already have an account?{" "}
             <Link href="/login" className="text-brand-orange font-bold hover:underline">
-              Sign In
+              Login
             </Link>
           </p>
         </div>
       </Card>
       
-      <p className="mt-8 text-[10px] text-center text-muted font-medium px-4 leading-relaxed max-w-xs">
-        By creating an account, you agree to our <span className="underline cursor-pointer">Terms of Service</span> and <span className="underline cursor-pointer">Privacy Policy</span>.
+      <p className="mt-6 text-[9px] text-center text-muted font-bold uppercase tracking-tight px-4 leading-relaxed max-w-xs">
+        By creating an account, you agree to our <br/>
+        <span className="underline cursor-pointer hover:text-brand-dark">Terms of Service</span> and <span className="underline cursor-pointer hover:text-brand-dark">Privacy Policy</span>.
       </p>
     </PageTransition>
   );

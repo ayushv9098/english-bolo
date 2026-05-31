@@ -8,7 +8,6 @@ import {
   Settings, 
   LogOut,
   Trophy,
-  Package,
   Medal,
   Flame,
   Star,
@@ -20,14 +19,12 @@ import {
   BarChart2,
   ChevronRight,
   Lock,
-  Check,
   Store,
   Key,
   Database,
   Trash2,
   AlertTriangle,
   ArrowLeft,
-  UserCircle,
   Pencil
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +36,42 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useGamification } from "@/context/GamificationContext";
 import { ProgressBar } from "@/components/gamification/ProgressBar";
 import { cn } from "@/lib/utils";
+
+// Avatar Sprite Sheet Mapping (8 columns, 4 rows)
+const AVATAR_MAP: Record<string, { x: number, y: number }> = {
+  "G01": { x: 0, y: 0 }, "G02": { x: 1, y: 0 }, "G03": { x: 2, y: 0 }, "G04": { x: 3, y: 0 }, "G05": { x: 4, y: 0 }, "G06": { x: 5, y: 0 }, "G07": { x: 6, y: 0 }, "G10": { x: 7, y: 0 },
+  "G11": { x: 0, y: 1 }, "G12": { x: 1, y: 1 }, "G13": { x: 2, y: 1 }, "G14": { x: 3, y: 1 }, "G17": { x: 4, y: 1 }, "G18": { x: 5, y: 1 }, "G19": { x: 6, y: 1 }, "G20": { x: 7, y: 1 },
+  "B01": { x: 0, y: 2 }, "B02": { x: 1, y: 2 }, "B03": { x: 2, y: 2 }, "B04": { x: 3, y: 2 }, "B05": { x: 4, y: 2 }, "B06": { x: 5, y: 2 }, "B17": { x: 6, y: 2 }, "B18": { x: 7, y: 2 },
+  "B11": { x: 0, y: 3 }, "B12": { x: 1, y: 3 }, "B13": { x: 2, y: 3 }, "B14": { x: 3, y: 3 }, "B15": { x: 4, y: 3 }, "B16": { x: 5, y: 3 }, "B19": { x: 6, y: 3 }, "B20": { x: 7, y: 3 },
+};
+
+const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
+
+function UserAvatar({ id, className = "" }: { id: string, className?: string }) {
+  const pos = AVATAR_MAP[id];
+  
+  if (!pos) {
+    // Fallback to emoji if it's not a sprite ID
+    return <span className={cn("flex items-center justify-center", className)}>{id || "😎"}</span>;
+  }
+
+  // The sprite sheet has 8 columns and 4 rows. 
+  // We add a small offset to skip the labels and header area.
+  return (
+    <div className={cn("overflow-hidden bg-gray-50 flex items-center justify-center", className)}>
+      <div 
+        style={{
+          backgroundImage: `url('/avatars/bundle.png')`,
+          backgroundSize: '800% 500%', // 8 columns, ~5 rows worth of height to account for header
+          backgroundPosition: `${(pos.x * 100) / 7}% ${(pos.y * 100) / 3.4 + 16}%`, // Calibrated for the bundle layout
+          width: '100%',
+          height: '100%',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
+    </div>
+  );
+}
 
 const UNLOCK_ROADMAP = [
   { xp: 500, title: "AI Hint Tokens ×5", desc: "Get 5 free hints for tough missions.", icon: "💡" },
@@ -59,8 +92,6 @@ const ACHIEVEMENTS = [
   { id: 3, title: 'First Mission', description: 'Complete a Real Life Mission', icon: '🏙️', unlocked: true },
   { id: 4, title: 'English Warrior', description: 'Reach English Warrior rank', icon: '⚔️', unlocked: false },
 ];
-
-const AVATAR_OPTIONS = ["😎", "🤓", "🐱", "🐶", "🦊", "🐼", "🐨", "🦁", "🐯", "🤖", "👻", "🦄", "🎨", "🎮", "🚀", "💡"];
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -104,7 +135,7 @@ export default function ProfilePage() {
       const { data } = await supabase.from("users").select("*").eq("id", user.id).single();
       setProfile(data);
       setEditName(data?.name || "");
-      setEditAvatar(data?.avatar_emoji || "😎");
+      setEditAvatar(data?.avatar_emoji || "G01");
     }
     loadProfile();
   }, [router, supabase]);
@@ -199,7 +230,7 @@ export default function ProfilePage() {
   }
 
   const firstName = profile.name ? profile.name.split(" ")[0] : "Learner";
-  const avatar = profile.avatar_emoji || "😎";
+  const avatarId = profile.avatar_emoji || "G01";
 
   // Modals Rendering Helper
   const renderModals = () => (
@@ -227,17 +258,24 @@ export default function ProfilePage() {
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-brand-dark/40 tracking-wider">Avatar Choose Karein</label>
-                <div className="grid grid-cols-4 gap-2 bg-gray-50 p-3 rounded-xl max-h-[160px] overflow-y-auto no-scrollbar border border-gray-100">
-                  {AVATAR_OPTIONS.map((emoji) => (
+                <div className="grid grid-cols-4 gap-2 bg-gray-50 p-3 rounded-xl max-h-[300px] overflow-y-auto no-scrollbar border border-gray-100">
+                  {AVATAR_OPTIONS.map((id) => (
                     <button
-                      key={emoji}
-                      onClick={() => setEditAvatar(emoji)}
+                      key={id}
+                      onClick={() => setEditAvatar(id)}
                       className={cn(
-                        "w-12 h-12 flex items-center justify-center text-2xl rounded-xl transition-all active:scale-90",
-                        editAvatar === emoji ? "bg-white shadow-sm ring-2 ring-brand-orange ring-offset-1" : "hover:bg-white/50"
+                        "w-14 h-14 flex items-center justify-center rounded-xl transition-all active:scale-90 overflow-hidden relative",
+                        editAvatar === id ? "bg-white shadow-sm ring-2 ring-brand-orange ring-offset-1" : "hover:bg-white/50"
                       )}
                     >
-                      {emoji}
+                      <UserAvatar id={id} className="w-full h-full" />
+                      {editAvatar === id && (
+                        <div className="absolute inset-0 bg-brand-orange/10 flex items-center justify-center">
+                           <div className="bg-brand-orange text-white rounded-full p-0.5">
+                             <Check size={10} strokeWidth={4} />
+                           </div>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -406,12 +444,8 @@ export default function ProfilePage() {
       {/* HEADER */}
       <section className="flex flex-col items-center text-center pt-4">
         <div className="relative group">
-          <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-[44px] shadow-card border-[3px] border-white ring-4 ring-brand-orange/10 overflow-hidden relative">
-            {avatar.startsWith("http") ? (
-              <img src={avatar} className="w-full h-full object-cover" alt="avatar" />
-            ) : (
-              <span className="drop-shadow-sm">{avatar}</span>
-            )}
+          <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-card border-[3px] border-white ring-4 ring-brand-orange/10 overflow-hidden relative">
+            <UserAvatar id={avatarId} className="w-full h-full" />
             {/* Overlay edit button on avatar */}
             <button 
               onClick={() => setShowEditModal(true)}

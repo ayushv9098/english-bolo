@@ -22,7 +22,7 @@ const config: Config = {
         xl: "20px",
       },
       boxShadow: {
-        card: "0 2px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)",
+        card: "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
         float: "0 8px 32px rgba(0,0,0,0.10)",
       },
       fontFamily: {
