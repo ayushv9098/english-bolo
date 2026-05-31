@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { ChevronRight, Zap, MessageCircle, MapPin, Bot } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HomeGamesRowProps {
@@ -49,40 +49,40 @@ export function HomeGamesRow({ playedToday }: HomeGamesRowProps) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-[19px] font-black text-brand-dark tracking-tight">Play Games 🎮</h3>
-        <Link href="/games" className="text-[11px] font-black text-brand-orange uppercase tracking-[0.1em] flex items-center gap-1 hover:gap-1.5 transition-all">
-          View All <ChevronRight size={14} strokeWidth={3} />
+        <h3 className="text-[17px] font-black text-brand-dark tracking-tight">Play Games 🎮</h3>
+        <Link href="/games" className="text-[10px] font-black text-brand-orange uppercase tracking-[0.1em] flex items-center gap-1 hover:gap-1.5 transition-all">
+          View All <ChevronRight size={12} strokeWidth={3} />
         </Link>
       </div>
       
-      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-5 px-5">
+      <div className="flex gap-3 overflow-x-auto pb-3 no-scrollbar -mx-5 px-5">
         {games.map((game, i) => (
           <Link key={i} href={game.href} className="shrink-0 group">
             <div className={cn(
-              "w-[104px] rounded-[24px] p-4 text-center border-[1.5px] relative active:scale-95 transition-all duration-300",
+              "w-[94px] rounded-[20px] p-3 text-center border-[1.5px] relative active:scale-95 transition-all duration-300",
               game.theme,
               game.accent,
               "shadow-sm hover:shadow-md"
             )}>
               {/* Status Dot */}
               {game.dot && (
-                <div className="absolute top-3 right-3 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                <div className="absolute top-2.5 right-2.5 w-2 h-2 bg-green-500 rounded-full border-2 border-white animate-pulse" />
               )}
               
               {/* Icon Container */}
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm border border-white/50 group-hover:rotate-6 transition-transform">
-                <span className="text-3xl drop-shadow-sm group-hover:scale-110 transition-transform">{game.emoji}</span>
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2.5 shadow-sm border border-white/50 group-hover:rotate-6 transition-transform">
+                <span className="text-2xl drop-shadow-sm group-hover:scale-110 transition-transform">{game.emoji}</span>
               </div>
 
               {/* Text Info */}
-              <div className="space-y-1">
-                <div className="text-[12px] font-black text-brand-dark leading-tight line-clamp-1">
+              <div className="space-y-0.5">
+                <div className="text-[11px] font-black text-brand-dark leading-tight line-clamp-1">
                   {game.name}
                 </div>
                 <div className={cn(
-                  "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter",
+                  "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
                   "bg-white/80 border border-white/50",
                   game.iconColor
                 )}>

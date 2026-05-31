@@ -44,9 +44,9 @@ export function HomeChecklist({ lessonDone, gameDone, speakingDone }: HomeCheckl
   ];
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-lg font-bold text-brand-dark">What to do today? ✅</h3>
-      <div className="bg-white rounded-[20px] border border-[#eee] p-4 space-y-4 shadow-sm">
+    <div className="space-y-2">
+      <h3 className="text-base font-bold text-brand-dark tracking-tight">What to do today? ✅</h3>
+      <div className="bg-white rounded-[18px] border border-[#eee] p-3.5 space-y-3.5 shadow-sm">
         {steps.map((step) => {
           const isDone = step.done;
           const isNext = !isDone && step.prevDone;
@@ -61,30 +61,30 @@ export function HomeChecklist({ lessonDone, gameDone, speakingDone }: HomeCheckl
             badgeText = "Done ✓";
             badgeClass = "bg-green-50 text-green-600";
             circleClass = "bg-green-100 text-green-600";
-            icon = <CheckCircle2 size={16} />;
+            icon = <CheckCircle2 size={14} />;
           } else if (isNext) {
             badgeText = "Do it now";
             badgeClass = "bg-orange-50 text-brand-orange";
             circleClass = "bg-[#FFF0EB] text-brand-orange";
-            icon = <span className="text-sm font-bold">{step.id}</span>;
+            icon = <span className="text-xs font-bold">{step.id}</span>;
           } else {
             badgeText = "Locked";
             badgeClass = "bg-gray-50 text-gray-400";
             circleClass = "bg-gray-100 text-gray-400";
-            icon = <span className="text-sm font-bold">{step.id}</span>;
+            icon = <span className="text-xs font-bold">{step.id}</span>;
           }
 
           const content = (
             <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-3">
-                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", circleClass)}>
+              <div className="flex items-center gap-2.5">
+                <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0", circleClass)}>
                   {icon}
                 </div>
-                <span className={cn("text-sm font-medium", isLocked ? "text-gray-400" : "text-brand-dark")}>
+                <span className={cn("text-[13px] font-semibold", isLocked ? "text-gray-400" : "text-brand-dark")}>
                   {step.name}
                 </span>
               </div>
-              <div className={cn("text-[10px] font-bold px-2 py-1 rounded-md whitespace-nowrap transition-colors", badgeClass)}>
+              <div className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-md whitespace-nowrap transition-colors uppercase tracking-tight", badgeClass)}>
                 {badgeText}
               </div>
             </div>

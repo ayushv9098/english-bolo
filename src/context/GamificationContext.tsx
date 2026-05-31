@@ -121,10 +121,17 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase
-      .from('user_stats')
-      .update({ total_xp: newXP, rank: newRank })
-      .eq('user_id', user.id);
+    // Update BOTH tables to prevent synchronization issues
+    await Promise.all([
+      supabase
+        .from('user_stats')
+        .update({ total_xp: newXP, rank: newRank })
+        .eq('user_id', user.id),
+      supabase
+        .from('users')
+        .update({ xp_points: newXP })
+        .eq('id', user.id)
+    ]);
 
     if (newLootBoxesToAward > 0) {
        // Insert new loot boxes

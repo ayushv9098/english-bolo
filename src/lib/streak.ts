@@ -34,14 +34,25 @@ export async function updateUserStreakAndXP(supabase: SupabaseClient, userId: st
 
   const newXp = (stats?.total_xp || 0) + xpGained;
 
-  await supabase
-    .from('user_stats')
-    .update({
-      current_streak: newStreak,
-      last_login: now.toISOString(),
-      total_xp: newXp
-    })
-    .eq('user_id', userId);
+  // Update BOTH tables to prevent synchronization issues
+  await Promise.all([
+    supabase
+      .from('user_stats')
+      .update({
+        current_streak: newStreak,
+        last_login: now.toISOString(),
+        total_xp: newXp
+      })
+      .eq('user_id', userId),
+    supabase
+      .from('users')
+      .update({
+        streak: newStreak,
+        last_active: now.toISOString(),
+        xp_points: newXp
+      })
+      .eq('id', userId)
+  ]);
 
   return { newStreak, newXp, hasDoneLessonToday };
 }
