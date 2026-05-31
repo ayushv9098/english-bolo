@@ -36,7 +36,7 @@ export default function LoginPage() {
       if (method === "email") {
         credentials.email = email;
       } else {
-        credentials.phone = phone.startsWith("+") ? phone : `91${phone.replace(/\D/g, "")}`;
+        credentials.phone = phone.startsWith("+") ? phone : `+91${phone.replace(/\D/g, "")}`;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword(credentials);
@@ -45,12 +45,12 @@ export default function LoginPage() {
 
       if (data.user) {
         toast.success("Welcome back!");
-        // Check onboarding status
+        // Use maybeSingle() or handle missing row to prevent error during login redirect
         const { data: profile } = await supabase
           .from("users")
           .select("goal")
           .eq("id", data.user.id)
-          .single();
+          .maybeSingle();
 
         if (profile?.goal) {
           router.push("/home");
@@ -71,7 +71,7 @@ export default function LoginPage() {
     const loadingToast = toast.loading("Connecting to Google...");
     
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -87,55 +87,27 @@ export default function LoginPage() {
 
   return (
     <PageTransition className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface">
-      <Card className="w-full max-w-md p-8 sm:p-10 space-y-8 border-none shadow-float overflow-hidden">
-        <div className="text-center space-y-3">
-          <h1 className="text-4xl font-[900] text-brand-dark tracking-tighter leading-none">AngreziBolo</h1>
-          <p className="text-muted font-medium text-base">Sign in to your account</p>
+      <Card className="w-full max-w-md p-6 sm:p-8 space-y-6 border-none shadow-float overflow-hidden">
+        <div className="text-center space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-dark tracking-tight leading-none">AngreziBolo</h1>
+          <p className="text-muted font-medium text-[13px]">Sign in to your account</p>
         </div>
 
-        <div className="space-y-6">
-          {/* Google Login */}
-          <button 
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={googleLoading}
-            className="w-full h-14 border border-gray-200 text-brand-dark hover:bg-gray-50 active:scale-[0.98] transition-all flex items-center justify-center gap-3 font-bold text-base bg-white rounded-btn shadow-sm disabled:opacity-50"
-          >
-            {googleLoading ? (
-              <div className="animate-spin h-5 w-5 border-2 border-brand-orange border-t-transparent rounded-full" />
-            ) : (
-              <>
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"/>
-                </svg>
-                Continue with Google
-              </>
-            )}
-          </button>
-
-          <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-gray-100"></div>
-            <span className="flex-shrink mx-4 text-[10px] font-bold text-muted uppercase tracking-[0.2em]">or use credentials</span>
-            <div className="flex-grow border-t border-gray-100"></div>
-          </div>
-
+        <div className="space-y-5">
           {/* Toggle Method */}
-          <div className="flex p-1 bg-gray-50 rounded-xl">
+          <div className="flex p-0.5 bg-gray-50 rounded-lg">
             <button
               onClick={() => setLoginMethod("email")}
-              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                method === "email" ? "bg-white text-brand-dark shadow-sm" : "text-muted"
+              className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${
+                method === "email" ? "bg-white text-brand-dark shadow-sm" : "text-muted hover:text-brand-dark/70"
               }`}
             >
               Email
             </button>
             <button
               onClick={() => setLoginMethod("phone")}
-              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                method === "phone" ? "bg-white text-brand-dark shadow-sm" : "text-muted"
+              className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${
+                method === "phone" ? "bg-white text-brand-dark shadow-sm" : "text-muted hover:text-brand-dark/70"
               }`}
             >
               Phone
@@ -144,19 +116,19 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Email/Phone Field */}
-            <div className="space-y-1.5">
-              <label htmlFor="identifier" className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">
+            <div className="space-y-1">
+              <label htmlFor="identifier" className="text-[9px] font-bold text-muted uppercase tracking-widest ml-1">
                 {method === "email" ? "Email Address" : "Phone Number"}
               </label>
               <div className="relative">
                 {method === "email" ? (
                   <>
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
                     <input
                       id="identifier"
                       type="email"
                       placeholder="name@example.com"
-                      className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/10 focus:border-brand-orange outline-none transition-all text-brand-dark font-semibold text-sm placeholder:text-gray-300"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -164,14 +136,14 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                    <div className="absolute left-11 top-1/2 -translate-y-1/2 font-bold text-brand-dark text-sm">+91</div>
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-brand-dark text-sm">+91</div>
                     <input
                       id="identifier"
                       type="tel"
                       placeholder="00000 00000"
                       maxLength={10}
-                      className="w-full pl-20 pr-4 py-3.5 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium tracking-wider"
+                      className="w-full pl-[4.5rem] pr-4 py-2.5 rounded-lg bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-semibold text-sm tracking-wider placeholder:text-gray-300 placeholder:tracking-normal"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                       required
@@ -182,20 +154,20 @@ export default function LoginPage() {
             </div>
 
             {/* Password Field */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex justify-between items-center px-1">
-                <label htmlFor="password" className="text-[10px] font-bold text-muted uppercase tracking-widest">Password</label>
-                <Link href="/forgot-password" size="sm" className="text-[10px] font-bold text-brand-orange uppercase tracking-wider hover:underline">
+                <label htmlFor="password" className="text-[9px] font-bold text-muted uppercase tracking-widest">Password</label>
+                <Link href="/forgot-password" className="text-[9px] font-bold text-brand-orange uppercase tracking-wider hover:underline">
                   Forgot?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-3.5 rounded-xl bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange outline-none transition-all text-brand-dark font-medium"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white border border-gray-100 focus:ring-2 focus:ring-brand-orange/10 focus:border-brand-orange outline-none transition-all text-brand-dark font-semibold text-sm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -203,9 +175,9 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-brand-dark transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-brand-dark transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -214,27 +186,55 @@ export default function LoginPage() {
               <input 
                 id="remember" 
                 type="checkbox" 
-                className="w-4 h-4 rounded border-gray-300 text-brand-orange focus:ring-brand-orange"
+                className="w-3.5 h-3.5 rounded border-gray-300 text-brand-orange focus:ring-brand-orange/20 cursor-pointer"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              <label htmlFor="remember" className="text-xs text-muted font-medium cursor-pointer">Remember me</label>
+              <label htmlFor="remember" className="text-[11px] text-muted font-bold uppercase tracking-tight cursor-pointer">Remember me</label>
             </div>
 
             <Button 
               type="submit" 
-              className="w-full h-14 text-base shadow-sm font-bold mt-2" 
+              className="w-full h-11 text-sm shadow-sm font-bold mt-2 rounded-lg" 
               isLoading={loading}
               disabled={loading}
             >
-              Sign In
-              <ArrowRight size={18} className="ml-2" />
+              Login
+              <ArrowRight size={16} className="ml-2" />
             </Button>
           </form>
+
+          <div className="relative flex items-center">
+            <div className="flex-grow border-t border-gray-100"></div>
+            <span className="flex-shrink mx-3 text-[9px] font-bold text-muted uppercase tracking-[0.2em]">or sign in with</span>
+            <div className="flex-grow border-t border-gray-100"></div>
+          </div>
+
+          {/* Google Login at Bottom */}
+          <button 
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            className="w-full h-11 border border-gray-200 text-brand-dark hover:bg-gray-50 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 font-bold text-sm bg-white rounded-lg shadow-sm disabled:opacity-50"
+          >
+            {googleLoading ? (
+              <div className="animate-spin h-4 w-4 border-2 border-brand-orange border-t-transparent rounded-full" />
+            ) : (
+              <>
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+              </>
+            )}
+          </button>
         </div>
 
-        <div className="text-center pt-2">
-          <p className="text-sm text-muted">
+        <div className="text-center pt-1">
+          <p className="text-[13px] text-muted font-medium">
             Don't have an account?{" "}
             <Link href="/signup" className="text-brand-orange font-bold hover:underline">
               Create Account

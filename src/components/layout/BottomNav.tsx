@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, BookOpen, BarChart2, User } from "lucide-react";
+import { Home, BookOpen, User, Gamepad2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -18,7 +18,7 @@ export default function BottomNav() {
   const navItems = [
     { label: "Home", icon: Home, href: "/home" },
     { label: "Lessons", icon: BookOpen, href: "/lessons" },
-    { label: "Progress", icon: BarChart2, href: "/progress" },
+    { label: "Games", icon: Gamepad2, href: "/games" },
     { label: "Profile", icon: User, href: "/profile" },
   ];
 

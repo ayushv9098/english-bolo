@@ -30,16 +30,16 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const variants = {
-      primary: "bg-brand-orange text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
-      ghost: "bg-transparent text-brand-orange border-[1.5px] border-brand-orange hover:bg-brand-orange/5 active:scale-[0.98]",
-      soft: "bg-[#FFF0EB] text-brand-orange hover:bg-[#FFE5D9] active:scale-[0.98]",
-      danger: "bg-red-500 text-white hover:bg-red-600 active:scale-[0.98]",
+      primary: "bg-brand-orange text-white shadow-sm hover:opacity-90 active:scale-[0.97] transition-all",
+      ghost: "bg-transparent text-brand-orange border border-brand-orange hover:bg-brand-orange/5 active:scale-[0.97] transition-all",
+      soft: "bg-[#FFF0EB] text-brand-orange hover:bg-[#FFE5D9] active:scale-[0.97] transition-all",
+      danger: "bg-red-500 text-white hover:bg-red-600 active:scale-[0.97] transition-all",
     };
 
     const sizes = {
-      sm: "px-4 py-2 text-sm rounded-xl",
-      md: "px-6 py-3.5 text-base rounded-btn font-semibold",
-      lg: "px-8 py-4.5 text-lg rounded-btn font-bold",
+      sm: "px-3.5 py-1.5 text-xs rounded-lg font-bold",
+      md: "px-5 py-2.5 text-sm rounded-btn font-bold",
+      lg: "px-7 py-3 text-base rounded-btn font-bold",
     };
 
     return (
@@ -74,7 +74,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               <path
                 className="opacity-75"
                 fill="currentColor"
-                d="4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               ></path>
             </svg>
             <span>Loading...</span>

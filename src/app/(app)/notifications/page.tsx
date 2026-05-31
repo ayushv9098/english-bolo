@@ -3,6 +3,7 @@
 import { ArrowLeft, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 export default function NotificationsPage() {
   const router = useRouter();

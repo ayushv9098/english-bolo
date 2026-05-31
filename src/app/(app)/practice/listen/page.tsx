@@ -21,8 +21,17 @@ export default function ListenPracticePage() {
 
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-IN';
+      utterance.rate = 0.9; // Slightly slower for better clarity
+      
+      utterance.onend = () => {
+        setRevealed(true);
+      };
+
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -69,14 +78,7 @@ export default function ListenPracticePage() {
             <Volume2 className="w-12 h-12 ml-1" />
           </button>
 
-          {!revealed ? (
-            <button 
-              onClick={() => setRevealed(true)}
-              className="flex items-center gap-2 text-brand-purple font-bold text-sm bg-purple-50 px-4 py-2 rounded-pill hover:bg-purple-100 transition-colors"
-            >
-              <Eye size={16} /> Reveal Translation
-            </button>
-          ) : (
+          {revealed && (
             <div className="animate-in slide-in-from-bottom-2 flex flex-col gap-3 w-full bg-gray-50 p-4 rounded-xl border border-gray-100">
               <p className="text-lg font-bold text-brand-dark leading-tight">
                 "{currentPhrase.en}"
@@ -86,16 +88,21 @@ export default function ListenPracticePage() {
               </p>
             </div>
           )}
+
+          <button 
+            onClick={() => setRevealed(!revealed)}
+            className="flex items-center gap-2 text-brand-purple font-bold text-sm bg-purple-50 px-4 py-2 rounded-pill hover:bg-purple-100 transition-colors"
+          >
+            <Eye size={16} /> {revealed ? "Hide Translation" : "Reveal Translation"}
+          </button>
         </Card>
 
-        {revealed && (
-          <Button 
-            className="mt-6 py-4 rounded-pill bg-brand-dark text-white animate-in slide-in-from-bottom-4" 
-            onClick={handleNext}
-          >
-            Next Phrase <ChevronRight size={18} className="ml-1" />
-          </Button>
-        )}
+        <Button 
+          className="mt-6 py-4 rounded-pill bg-brand-dark text-white active:scale-[0.98]" 
+          onClick={handleNext}
+        >
+          Next Phrase <ChevronRight size={18} className="ml-1" />
+        </Button>
       </main>
     </div>
   );
