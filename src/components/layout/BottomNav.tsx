@@ -23,7 +23,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#F5EDE8] px-6 min-h-[64px] pb-[env(safe-area-inset-bottom,16px)] pt-2 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#F5EDE8] px-4 min-h-[62px] pb-[env(safe-area-inset-bottom,12px)] pt-1.5 z-50">
       <div className="max-w-md mx-auto flex justify-between items-center h-full">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -35,8 +35,8 @@ export default function BottomNav() {
             >
               <div
                 className={cn(
-                  "px-[14px] py-[4px] rounded-full transition-all duration-200 flex items-center justify-center",
-                  isActive ? "bg-[#FFF0EB]" : "bg-transparent"
+                  "px-[14px] py-[4px] rounded-2xl transition-all duration-200 flex items-center justify-center",
+                  isActive ? "bg-orange-50" : "bg-transparent"
                 )}
               >
                 <item.icon
@@ -45,12 +45,13 @@ export default function BottomNav() {
                     "transition-colors duration-200",
                     isActive ? "text-brand-orange" : "text-[#C4C4D4]"
                   )}
+                  strokeWidth={isActive ? 3 : 2}
                 />
               </div>
               <span
                 className={cn(
-                  "text-[10px] uppercase tracking-[0.05em] transition-colors duration-200",
-                  isActive ? "text-brand-orange font-[700]" : "text-[#C4C4D4] font-normal"
+                  "text-[10px] font-black uppercase tracking-[0.05em] transition-colors duration-200",
+                  isActive ? "text-brand-orange" : "text-[#C4C4D4] opacity-80"
                 )}
               >
                 {item.label}

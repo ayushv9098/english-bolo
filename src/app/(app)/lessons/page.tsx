@@ -85,42 +85,42 @@ export default function LessonsPage() {
   });
 
   return (
-    <PageTransition className="flex flex-col gap-5 p-6 pb-24">
+    <PageTransition className="flex flex-col gap-4 p-5 pb-24">
       {/* HEADER */}
-      <header className="flex flex-col gap-4 pt-8">
+      <header className="flex flex-col gap-4 pt-6">
         <div className="space-y-0.5">
-          <h1 className="text-[32px] font-black text-brand-dark tracking-tight leading-none">Explore</h1>
-          <p className="text-muted text-[14px] font-bold">
+          <h1 className="text-[28px] font-black text-brand-dark tracking-tight leading-none">Explore</h1>
+          <p className="text-muted text-[13px] font-bold">
             Master English one situation at a time.
           </p>
         </div>
 
-        {/* SEARCH BAR */}
+        {/* SLEEK SEARCH BAR */}
         <div className="relative group">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center justify-center">
-            <Search className="text-brand-dark/30 w-4.5 h-4.5 transition-colors group-focus-within:text-brand-orange" strokeWidth={2.5} />
+            <Search className="text-brand-dark/20 w-4 h-4 transition-colors group-focus-within:text-brand-orange" strokeWidth={3} />
           </div>
           <input
             type="text"
             placeholder="Search lessons..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-[#F5EDE8] rounded-xl py-3 pl-10 pr-4 text-[14px] font-bold shadow-card focus:ring-4 focus:ring-brand-orange/5 outline-none transition-all placeholder:text-brand-dark/20"
+            className="w-full bg-white border border-[#F5EDE8] rounded-xl py-2 pl-10 pr-4 text-[13px] font-bold shadow-sm focus:ring-4 focus:ring-brand-orange/5 outline-none transition-all placeholder:text-brand-dark/10"
           />
         </div>
       </header>
 
-      {/* FILTER PILLS ROW */}
-      <div className="flex gap-2.5 overflow-x-auto pb-1.5 no-scrollbar -mx-6 px-6">
+      {/* COMPACT FILTER PILLS */}
+      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-5 px-5">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={cn(
-              "px-5 py-2 rounded-lg text-[12px] font-black transition-all whitespace-nowrap active:scale-95 uppercase tracking-widest",
+              "px-4 py-1.5 rounded-lg text-[10px] font-black transition-all whitespace-nowrap active:scale-95 uppercase tracking-[0.1em]",
               activeCategory === cat
-                ? "bg-brand-orange text-white shadow-lg shadow-orange-100"
-                : "bg-white text-brand-dark/40 border border-[#F5EDE8] hover:bg-gray-50 shadow-sm"
+                ? "bg-brand-orange text-white shadow-md shadow-orange-100"
+                : "bg-white text-brand-dark/30 border border-[#F5EDE8] shadow-sm"
             )}
           >
             {cat}
@@ -129,31 +129,29 @@ export default function LessonsPage() {
       </div>
 
       {/* LESSON CARDS LIST */}
-      <div className="flex flex-col gap-3.5 mt-1">
+      <div className="flex flex-col gap-3 mt-1">
         {loading ? (
            Array.from({ length: 5 }).map((_, i) => (
-             <Card key={i} className="p-3.5 border-none shadow-card flex items-center gap-4">
-               <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
-               <div className="flex-1 space-y-1.5">
-                 <Skeleton className="h-3 w-16 rounded-full" />
-                 <Skeleton className="h-4 w-3/4 rounded-full" />
-                 <Skeleton className="h-3 w-1/2 rounded-full" />
+             <Card key={i} className="p-3 border-none shadow-sm flex items-center gap-3">
+               <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+               <div className="flex-1 space-y-1">
+                 <Skeleton className="h-2.5 w-16 rounded-full" />
+                 <Skeleton className="h-3.5 w-3/4 rounded-full" />
                </div>
-               <Skeleton className="w-7 h-7 rounded-full shrink-0" />
              </Card>
            ))
         ) : filteredLessons.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center animate-in fade-in zoom-in-95 duration-300">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-100 shadow-inner">
-              <Search className="text-gray-300 w-8 h-8" />
+          <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100 shadow-inner">
+              <Search className="text-gray-300 w-6 h-6" />
             </div>
-            <h3 className="font-black text-brand-dark text-base tracking-tight">No lessons found</h3>
-            <p className="text-muted text-[13px] font-bold max-w-[180px] mt-0.5 leading-relaxed">
-              Try searching for something else or change the category.
+            <h3 className="font-black text-brand-dark text-sm tracking-tight">No lessons found</h3>
+            <p className="text-muted text-[12px] font-bold max-w-[180px] mt-0.5 leading-relaxed">
+              Try searching for something else.
             </p>
             <Button 
               variant="ghost" 
-              className="mt-4 border-brand-orange/20 text-brand-orange font-black text-[10px] uppercase tracking-widest px-5 h-10"
+              className="mt-4 border-brand-orange/20 text-brand-orange font-black text-[9px] uppercase tracking-widest px-4 h-9"
               onClick={() => { setSearchQuery(""); setActiveCategory("All"); }}
             >
               Clear filters
@@ -166,32 +164,32 @@ export default function LessonsPage() {
             
             return (
               <Link key={lesson.id} href={`/lesson/${lesson.id}`}>
-                <Card className="p-3.5 flex flex-col gap-3 group active:scale-[0.98] transition-all shadow-card border border-[#F5EDE8] rounded-[20px] relative overflow-hidden">
+                <Card className="p-3 flex flex-col gap-2.5 group active:scale-[0.98] transition-all shadow-sm border border-[#F5EDE8] rounded-[18px] relative overflow-hidden">
                   {isCompleted && (
-                    <div className="absolute top-0 right-0 w-10 h-10 bg-green-500/10 flex items-center justify-center rounded-bl-2xl">
-                      <CheckCircle2 size={14} className="text-green-600 mb-0.5 ml-0.5" />
+                    <div className="absolute top-0 right-0 w-8 h-8 bg-green-500/10 flex items-center justify-center rounded-bl-xl">
+                      <CheckCircle2 size={12} className="text-green-600" />
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-3.5">
+                  <div className="flex items-center gap-3">
                     {/* ICON BOX */}
                     <div
                       className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border shadow-sm group-hover:rotate-6 transition-transform",
+                        "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-sm group-hover:rotate-6 transition-transform",
                         lesson.difficulty === "BEGINNER"
                           ? "bg-orange-50 border-orange-100/50 text-brand-orange"
                           : "bg-purple-50 border-purple-100/50 text-brand-purple"
                       )}
                     >
-                      <Icon size={22} strokeWidth={2.5} />
+                      <Icon size={20} strokeWidth={2.5} />
                     </div>
 
                     {/* MIDDLE CONTENT */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-0.5">
                         <span
                           className={cn(
-                            "inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-[0.1em]",
+                            "inline-block px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-[0.05em]",
                             lesson.difficulty === "BEGINNER"
                               ? "bg-blue-50 text-blue-600"
                               : "bg-purple-50 text-brand-purple"
@@ -199,27 +197,27 @@ export default function LessonsPage() {
                         >
                           {lesson.difficulty}
                         </span>
-                        <div className="flex items-center gap-1 text-muted text-[9px] font-black uppercase tracking-tighter">
-                          <Clock size={9} strokeWidth={3} />
+                        <div className="flex items-center gap-0.5 text-muted text-[8px] font-black uppercase tracking-tighter">
+                          <Clock size={8} strokeWidth={3} />
                           <span>{lesson.duration_mins}m</span>
                         </div>
                       </div>
                       
-                      <h3 className="font-black text-brand-dark text-[15px] tracking-tight group-hover:text-brand-orange transition-colors">
+                      <h3 className="font-black text-brand-dark text-[14px] tracking-tight group-hover:text-brand-orange transition-colors leading-tight">
                         {lesson.title}
                       </h3>
-                      <p className="hindi text-muted font-bold italic text-[11px] mt-0.5 truncate pr-4">
+                      <p className="hindi text-muted font-bold italic text-[10px] mt-0.5 truncate pr-2 opacity-80">
                         {lesson.hindi_description}
                       </p>
                     </div>
 
                     {/* RIGHT SIDE */}
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <div className="flex items-center gap-1 text-yellow-600 bg-yellow-50 border border-yellow-100/50 px-1.5 py-0.5 rounded-lg text-[9px] font-black shadow-sm">
-                        <Star size={9} fill="currentColor" />
+                      <div className="flex items-center gap-1 text-yellow-600 bg-yellow-50 border border-yellow-100/50 px-1.5 py-0.5 rounded-lg text-[8px] font-black shadow-sm">
+                        <Star size={8} fill="currentColor" />
                         <span>{lesson.potentialXP} XP</span>
                       </div>
-                      <ChevronRight size={18} strokeWidth={3} className="text-brand-dark/10 group-hover:text-brand-orange transition-all group-hover:translate-x-1" />
+                      <ChevronRight size={14} strokeWidth={4} className="text-brand-dark/10 group-hover:text-brand-orange transition-all group-hover:translate-x-0.5" />
                     </div>
                   </div>
 
@@ -228,7 +226,7 @@ export default function LessonsPage() {
                     <div className="pt-0.5">
                       <ProgressBar
                         value={lesson.progress}
-                        size="sm"
+                        size="xs"
                         color={isCompleted ? "green" : "orange"}
                       />
                     </div>

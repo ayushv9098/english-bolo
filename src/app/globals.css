@@ -8,8 +8,8 @@
   --color-surface: #FDF6F0;
   --color-muted: #9B9BAE;
 
-  --radius-card: 24px;
-  --radius-btn: 16px;
+  --radius-card: 24px; /* Restored to original premium rounding */
+  --radius-btn: 16px;  /* Restored to original premium rounding */
   --radius-pill: 50px;
   --radius-xl: 20px;
 
@@ -23,11 +23,13 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    font-size: 16px; /* Restored to default scale for better proportions */
   }
 
   body {
     @apply bg-surface text-brand-dark antialiased;
     font-family: var(--font-sans);
+    line-height: 1.5;
   }
 
   /* Custom Scrollbar */
@@ -42,10 +44,6 @@
   ::-webkit-scrollbar-thumb {
     @apply bg-brand-orange/40 rounded-full;
   }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-brand-orange/60;
-  }
 }
 
 @layer components {
@@ -54,18 +52,18 @@
   }
 
   .card {
-    @apply bg-white rounded-card shadow-card p-5;
+    @apply bg-white rounded-card shadow-card p-5; /* Restored premium padding */
   }
 
   .btn-primary {
-    @apply bg-brand-orange text-white rounded-btn font-semibold px-6 py-3.5 transition-all active:scale-[0.98] shadow-sm;
+    @apply bg-brand-orange text-white rounded-btn font-bold px-6 py-3 transition-all active:scale-[0.98] shadow-sm;
   }
 
   .btn-ghost {
-    @apply bg-transparent text-brand-orange border-[1.5px] border-brand-orange rounded-btn font-semibold px-6 py-3.5 transition-all active:scale-[0.98];
+    @apply bg-transparent text-brand-orange border-[1.5px] border-brand-orange rounded-btn font-bold px-6 py-3 transition-all active:scale-[0.98];
   }
 
   .badge {
-    @apply rounded-pill text-xs px-3 py-1 font-medium;
+    @apply rounded-pill text-[11px] px-3 py-1 font-black uppercase tracking-tight;
   }
 }
