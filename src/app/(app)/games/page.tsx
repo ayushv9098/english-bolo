@@ -1,7 +1,7 @@
 "use client";
 
 import Card from "@/components/ui/Card";
-import { Zap, MessageSquare, MapPin, Bot, Heart, Trophy, ArrowRight, Flame, Star, Target } from "lucide-react";
+import { ArrowRight, Flame, Star, Target } from "lucide-react";
 import Link from "next/link";
 import PageTransition from "@/components/ui/PageTransition";
 import { cn } from "@/lib/utils";
@@ -9,13 +9,32 @@ import { useGamification } from "@/context/GamificationContext";
 import { createClient } from "@/lib/supabase/client";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { motion } from "framer-motion";
+
+type GameTheme = {
+  bg: string;
+  border: string;
+  accent: string;
+  href: string;
+  title?: string;
+  emoji?: string;
+  description?: string;
+};
+
+type GameCard = Partial<GameTheme> & {
+  game_key: string;
+  title?: string;
+  description?: string;
+  emoji?: string;
+  base_xp_reward?: number;
+  theme?: string;
+  xp?: string;
+};
 
 export default function GamesHub() {
   const { totalXP, currentStreak, isLoading: statsLoading } = useGamification();
   const supabase = createClient();
 
-  const [games, setGames] = useState<any[]>([]);
+  const [games, setGames] = useState<GameCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,16 +42,16 @@ export default function GamesHub() {
       const { data } = await supabase.from('game_meta').select('*').eq('is_active', true);
       if (data) {
         // Map keys to themes
-        const themes: Record<string, any> = {
-          speed_speak: { bg: "bg-orange-50", border: "border-orange-100/50", accent: "text-orange-600", href: "/games/speed-speak" },
-          chat_race: { bg: "bg-blue-50", border: "border-blue-100/50", accent: "text-blue-600", href: "/games/chat-race" },
-          real_life: { bg: "bg-rose-50", border: "border-rose-100/50", accent: "text-rose-600", href: "/games/real-life" },
-          ai_partner: { bg: "bg-purple-50", border: "border-purple-100/50", accent: "text-purple-600", href: "/games/ai-partner" },
-          survival: { bg: "bg-red-50", border: "border-red-100/50", accent: "text-red-600", href: "/games/survival" },
-          daily_challenge: { bg: "bg-yellow-50", border: "border-yellow-100/50", accent: "text-yellow-600", href: "/games/daily-challenge" },
+        const themes: Record<string, GameTheme> = {
+          speed_speak: { bg: "bg-orange-50", border: "border-orange-100/50", accent: "text-orange-600", href: "/games/speed-speak", title: "Word Rush", emoji: "⚡", description: "Tap the words in order before time runs out!" },
+          chat_race: { bg: "bg-blue-50", border: "border-blue-100/50", accent: "text-blue-600", href: "/games/chat-race", title: "Quick Reply", emoji: "💬", description: "Pick the most natural reply in a real chat." },
+          real_life: { bg: "bg-rose-50", border: "border-rose-100/50", accent: "text-rose-600", href: "/games/real-life", title: "English Monopoly", emoji: "🎲", description: "Roll, travel & conquer cities by answering!" },
+          ai_partner: { bg: "bg-purple-50", border: "border-purple-100/50", accent: "text-purple-600", href: "/games/ai-partner", title: "Word Match", emoji: "🧠", description: "Match Hindi words to their English meaning." },
+          survival: { bg: "bg-red-50", border: "border-red-100/50", accent: "text-red-600", href: "/games/survival", title: "Survival Quiz", emoji: "❤️", description: "3 lives, endless questions. Survive!" },
+          daily_challenge: { bg: "bg-yellow-50", border: "border-yellow-100/50", accent: "text-yellow-600", href: "/games/daily-challenge", title: "Fill the Blank", emoji: "✏️", description: "Complete the English sentence." },
         };
 
-        setGames(data.map(g => ({
+        setGames(data.map((g): GameCard => ({
           ...g,
           ...themes[g.game_key],
           xp: `+${g.base_xp_reward} XP`
@@ -110,7 +129,7 @@ export default function GamesHub() {
             ))
           ) : (
             games.map((game, index) => (
-              <Link key={index} href={game.href} className="group">
+              <Link key={index} href={game.href ?? "/games"} className="group">
                 <Card className={cn(
                   "p-4 flex items-center gap-4 active:scale-[0.98] transition-all border-[1.5px] shadow-sm hover:shadow-md rounded-[24px]",
                   game.theme,

@@ -26,16 +26,18 @@ import {
   Pencil,
   Check as CheckIcon,
   Store,
-  Wallet
+  Wallet,
+  Crown,
+  Sparkles
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { enablePushReminders, disablePushReminders, formatReminderTime } from "@/lib/push";
 
 import PageTransition from "@/components/ui/PageTransition";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useGamification } from "@/context/GamificationContext";
-import { ProgressBar } from "@/components/gamification/ProgressBar";
 import { cn } from "@/lib/utils";
 import { UserAvatar, AVATAR_OPTIONS } from "@/components/ui/UserAvatar";
 
@@ -52,6 +54,15 @@ const UNLOCK_ROADMAP = [
   { xp: 50000, title: "English Master Certificate", desc: "Official completion badge.", icon: "🎓" },
 ];
 
+const RANK_TIERS = [
+  { name: "Beginner", minXP: 0 },
+  { name: "Speaker", minXP: 1000 },
+  { name: "Communicator", minXP: 3000 },
+  { name: "Fluent", minXP: 7000 },
+  { name: "English Warrior", minXP: 15000 },
+  { name: "English Master", minXP: 30000 },
+];
+
 const ACHIEVEMENTS = [
   { id: 1, title: 'First 100 XP', description: 'Earn your first 100 XP', icon: '🌟', unlocked: true },
   { id: 2, title: '7 Day Streak', description: 'Play for 7 days in a row', icon: '🔥', unlocked: false },
@@ -62,13 +73,16 @@ const ACHIEVEMENTS = [
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
-  const { totalXP, rank, currentStreak, unopenedLootBoxes, openLootBox } = useGamification();
+  const { totalXP, rank, currentStreak, maxStreak, unopenedLootBoxes, openLootBox } = useGamification();
   
   const [profile, setProfile] = useState<any>(null);
   const [showSecurityView, setShowSecurityView] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [remindersEnabled, setRemindersEnabled] = useState(true);
-  
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState("20:30");
+  const [showRemindersModal, setShowRemindersModal] = useState(false);
+  const [reminderBusy, setReminderBusy] = useState(false);
+
   // Modals
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -102,9 +116,16 @@ export default function ProfilePage() {
       setProfile(data);
       setEditName(data?.name || "");
       setEditAvatar(data?.avatar_emoji || "G01");
+      setRemindersEnabled(!!data?.reminder_enabled);
+      setReminderTime(data?.reminder_time || "20:30");
     }
     loadProfile();
   }, [router, supabase]);
+
+  // Sync the toggle UI with the theme that's already applied to <html>
+  useEffect(() => {
+    setDarkMode(document.documentElement.classList.contains("dark"));
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -171,28 +192,70 @@ export default function ProfilePage() {
   };
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    toast.success(darkMode ? "Light mode activated" : "Dark mode activated", {
-      icon: darkMode ? '☀️' : '🌙'
+    const next = !darkMode;
+    setDarkMode(next);
+    const root = document.documentElement;
+    if (next) {
+      root.classList.add("dark");
+      try { localStorage.setItem("theme", "dark"); } catch {}
+    } else {
+      root.classList.remove("dark");
+      try { localStorage.setItem("theme", "light"); } catch {}
+    }
+    toast.success(next ? "Dark mode activated" : "Light mode activated", {
+      icon: next ? '🌙' : '☀️'
     });
   };
 
-  const toggleReminders = () => {
-    setRemindersEnabled(!remindersEnabled);
-    toast.success(remindersEnabled ? "Reminders off" : "Reminders on", { icon: remindersEnabled ? '🔕' : '🔔' });
+  // Enable reminders (or update the time) — requests permission + subscribes to push.
+  const handleEnableReminders = async (time: string) => {
+    setReminderBusy(true);
+    const res = await enablePushReminders(time);
+    setReminderBusy(false);
+    if (res.ok) {
+      setRemindersEnabled(true);
+      setReminderTime(time);
+      setShowRemindersModal(false);
+      toast.success(`Reminder set for ${formatReminderTime(time)}`, { icon: "🔔" });
+    } else {
+      toast.error(res.error || "Reminder set nahi hua");
+    }
+  };
+
+  const handleDisableReminders = async () => {
+    setReminderBusy(true);
+    const res = await disablePushReminders();
+    setReminderBusy(false);
+    if (res.ok) {
+      setRemindersEnabled(false);
+      setShowRemindersModal(false);
+      toast.success("Reminders off", { icon: "🔕" });
+    } else {
+      toast.error(res.error || "Reminders off nahi hue");
+    }
   };
 
   if (!profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-surface">
-        <Skeleton className="w-20 h-20 rounded-full mb-4" />
-        <Skeleton className="w-24 h-4" />
+        <Skeleton className="w-16 h-16 rounded-full mb-4" />
+        <Skeleton className="w-20 h-4" />
       </div>
     );
   }
 
   const firstName = profile.name ? profile.name.split(" ")[0] : "Learner";
   const avatarId = profile.avatar_emoji || "G01";
+
+  // Real progress toward the next rank tier
+  let tierIdx = 0;
+  for (let i = 0; i < RANK_TIERS.length; i++) if (totalXP >= RANK_TIERS[i].minXP) tierIdx = i;
+  const nextTier = RANK_TIERS[tierIdx + 1];
+  const tierFloor = RANK_TIERS[tierIdx].minXP;
+  const rankProgress = nextTier
+    ? Math.min(100, Math.round(((totalXP - tierFloor) / (nextTier.minXP - tierFloor)) * 100))
+    : 100;
+  const xpToNext = nextTier ? nextTier.minXP - totalXP : 0;
 
   const renderModals = () => (
     <>
@@ -207,11 +270,11 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black uppercase text-brand-dark/30 tracking-widest px-1">Your Name</label>
-                <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 font-bold text-sm focus:ring-4 focus:ring-brand-orange/5 outline-none" />
+                <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-sm font-bold focus:ring-4 focus:ring-brand-orange/5 outline-none" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black uppercase text-brand-dark/30 tracking-widest px-1">Select Avatar</label>
-                <div className="grid grid-cols-4 gap-2 bg-gray-50 p-2 rounded-xl max-h-[220px] overflow-y-auto no-scrollbar border border-gray-100">
+                <div className="grid grid-cols-4 gap-2 bg-gray-50 p-2 rounded-xl max-h-[180px] overflow-y-auto no-scrollbar border border-gray-100">
                   {AVATAR_OPTIONS.map((id) => (
                     <button key={id} onClick={() => setEditAvatar(id)} className={cn("w-12 h-12 flex items-center justify-center rounded-lg transition-all active:scale-90 overflow-hidden relative", editAvatar === id ? "bg-white shadow-sm ring-2 ring-brand-orange" : "hover:bg-white/50")}>
                       <UserAvatar id={id} className="w-full h-full" />
@@ -221,8 +284,8 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 pt-1">
-                <Button onClick={handleSaveProfile} isLoading={isSavingProfile} className="w-full bg-brand-orange text-white border-none h-11 font-black rounded-xl text-xs uppercase tracking-widest">Save Changes</Button>
-                <Button variant="ghost" className="w-full h-9 border-none text-muted font-bold text-xs" onClick={() => setShowEditModal(false)}>Cancel</Button>
+                <Button onClick={handleSaveProfile} isLoading={isSavingProfile} className="w-full bg-brand-orange text-white border-none h-10 font-black rounded-xl text-[11px] uppercase tracking-widest">Save Changes</Button>
+                <Button variant="ghost" className="w-full h-8 border-none text-muted font-bold text-[11px]" onClick={() => setShowEditModal(false)}>Cancel</Button>
               </div>
             </div>
           </Card>
@@ -231,7 +294,7 @@ export default function ProfilePage() {
 
       {showPasswordModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-          <Card className="w-full max-w-xs p-6 space-y-6 border-none shadow-2xl animate-in zoom-in-95 duration-200">
+          <Card className="w-full max-w-xs p-6 space-y-6 border-none shadow-2xl">
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-orange-50 text-brand-orange rounded-full flex items-center justify-center mx-auto mb-2"><Key size={24} /></div>
               <h3 className="text-lg font-black text-brand-dark">Change Password</h3>
@@ -248,7 +311,7 @@ export default function ProfilePage() {
 
       {showPrivacyModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-          <Card className="w-full max-w-xs p-6 space-y-6 border-none shadow-2xl animate-in zoom-in-95 duration-200">
+          <Card className="w-full max-w-xs p-6 space-y-6 border-none shadow-2xl">
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2"><Database size={24} /></div>
               <h3 className="text-lg font-black text-brand-dark">Data & Privacy</h3>
@@ -301,60 +364,108 @@ export default function ProfilePage() {
           </Card>
         </div>
       )}
+
+      {/* DAILY REMINDER MODAL */}
+      {showRemindersModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <Card className="w-full max-w-xs p-6 space-y-5 border-none shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-purple-50 text-brand-purple rounded-full flex items-center justify-center mx-auto mb-1"><Bell size={24} /></div>
+              <h3 className="text-lg font-black text-brand-dark">Daily Reminder</h3>
+              <p className="text-[11px] text-muted font-semibold leading-relaxed px-2">Roz is time par practice ka reminder milega — chahe app band ho.</p>
+            </div>
+            <div className="space-y-3">
+              <label className="text-[9px] font-black uppercase text-brand-dark/30 tracking-widest px-1">Choose time</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[{ label: "8:00 AM", v: "08:00" }, { label: "1:00 PM", v: "13:00" }, { label: "8:30 PM", v: "20:30" }].map((opt) => (
+                  <button
+                    key={opt.v}
+                    onClick={() => setReminderTime(opt.v)}
+                    className={cn(
+                      "h-9 rounded-xl text-[11px] font-black transition-all active:scale-95",
+                      reminderTime === opt.v ? "bg-brand-purple text-white shadow-sm" : "bg-gray-50 text-brand-dark/60"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                <span className="text-[11px] font-bold text-brand-dark/50">Custom time</span>
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="bg-white border border-gray-100 rounded-lg px-2 py-1 text-sm font-bold outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
+              <Button onClick={() => handleEnableReminders(reminderTime)} isLoading={reminderBusy} className="w-full bg-brand-purple text-white border-none h-11 font-black rounded-xl text-[11px] uppercase tracking-widest">
+                {remindersEnabled ? "Update Reminder" : "Turn On Reminder"}
+              </Button>
+              {remindersEnabled && (
+                <Button variant="ghost" onClick={handleDisableReminders} disabled={reminderBusy} className="w-full h-9 border-none text-red-400 font-bold text-[11px]">Turn Off</Button>
+              )}
+              <Button variant="ghost" className="w-full h-8 border-none text-muted font-bold text-[11px]" onClick={() => setShowRemindersModal(false)}>Cancel</Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </>
   );
 
   // --- SECURITY SUB-VIEW RENDER ---
   if (showSecurityView) {
     return (
-      <PageTransition className="flex-1 flex flex-col gap-6 p-6 pb-24 overflow-x-hidden">
+      <PageTransition className="flex-1 flex flex-col gap-6 p-6 pb-24 overflow-x-hidden bg-surface">
         <header className="flex items-center gap-4 py-4">
           <button 
             onClick={() => setShowSecurityView(false)}
-            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-90 transition-transform"
+            className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-90 transition-transform"
           >
-            <ArrowLeft size={20} className="text-brand-dark" />
+            <ArrowLeft size={18} className="text-brand-dark" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-brand-dark">Privacy & Security</h1>
-            <p className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-widest">Account Protection</p>
+            <h1 className="text-lg font-black text-brand-dark">Privacy & Security</h1>
+            <p className="text-[9px] font-bold text-brand-dark/30 uppercase tracking-widest leading-none mt-0.5">Account Protection</p>
           </div>
         </header>
 
         <section className="flex flex-col gap-4 animate-in slide-in-from-right-4 duration-300">
-           <Card className="p-0 border-none shadow-card overflow-hidden">
+           <Card className="p-0 border-none shadow-card overflow-hidden rounded-[20px] bg-white">
             <div className="flex flex-col">
-              <button onClick={() => setShowPasswordModal(true)} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-all active:bg-slate-100/50 text-left w-full group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center group-active:scale-90 transition-transform"><Key size={20} className="text-brand-orange" /></div>
+              <button onClick={() => setShowPasswordModal(true)} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-all active:bg-slate-100/50 text-left w-full group">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center group-active:scale-90 transition-transform"><Key size={18} className="text-brand-orange" /></div>
                   <div className="flex flex-col">
-                    <span className="text-[15px] font-bold text-brand-dark">Change Password</span>
-                    <span className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-tight">Update login security</span>
+                    <span className="text-sm font-bold text-brand-dark">Change Password</span>
+                    <span className="text-[9px] font-bold text-brand-dark/25 uppercase tracking-tighter">Update login security</span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-brand-dark/20" />
+                <ChevronRight size={16} className="text-brand-dark/15" />
               </button>
               <div className="h-[1px] bg-slate-50 mx-4" />
-              <button onClick={() => setShowPrivacyModal(true)} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-all active:bg-slate-100/50 text-left w-full group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center group-active:scale-90 transition-transform"><Database size={20} className="text-blue-500" /></div>
+              <button onClick={() => setShowPrivacyModal(true)} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-all active:bg-slate-100/50 text-left w-full group">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center group-active:scale-90 transition-transform"><Database size={18} className="text-blue-500" /></div>
                   <div className="flex flex-col">
-                    <span className="text-[15px] font-bold text-brand-dark">Data & Privacy</span>
-                    <span className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-tight">Export & Manage data</span>
+                    <span className="text-sm font-bold text-brand-dark">Data & Privacy</span>
+                    <span className="text-[9px] font-bold text-brand-dark/25 uppercase tracking-tighter">Export & Manage data</span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-brand-dark/20" />
+                <ChevronRight size={16} className="text-brand-dark/15" />
               </button>
               <div className="h-[1px] bg-slate-50 mx-4" />
-              <button onClick={() => setShowDeleteConfirm(true)} className="p-5 flex items-center justify-between hover:bg-red-50/30 transition-all active:bg-red-50/50 text-left w-full group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center group-active:scale-90 transition-transform"><Trash2 size={20} className="text-red-500" /></div>
+              <button onClick={() => setShowDeleteConfirm(true)} className="p-4 flex items-center justify-between hover:bg-red-50/30 transition-all active:bg-red-50/50 text-left w-full group">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center group-active:scale-90 transition-transform"><Trash2 size={18} className="text-red-500" /></div>
                   <div className="flex flex-col">
-                    <span className="text-[15px] font-bold text-red-500">Delete Account</span>
-                    <span className="text-[10px] font-bold text-red-400/50 uppercase tracking-tight">Remove all data</span>
+                    <span className="text-sm font-bold text-red-500">Delete Account</span>
+                    <span className="text-[9px] font-bold text-red-400/30 uppercase tracking-tighter">Remove all data</span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-brand-dark/20" />
+                <ChevronRight size={16} className="text-brand-dark/15" />
               </button>
             </div>
           </Card>
@@ -366,97 +477,120 @@ export default function ProfilePage() {
   }
 
   return (
-    <PageTransition className="flex-1 flex flex-col gap-8 p-6 pb-24 overflow-x-hidden bg-surface">
-      {/* HEADER */}
-      <section className="flex flex-col items-center text-center pt-4">
-        <div className="relative group">
-          <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-card border-[3px] border-white ring-4 ring-brand-orange/10 overflow-hidden relative">
-            <UserAvatar id={avatarId} className="w-full h-full" />
-            <button 
-              onClick={() => setShowEditModal(true)}
-              className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Pencil size={20} className="text-white drop-shadow-md" />
-            </button>
-          </div>
-          <button 
-            onClick={() => setShowEditModal(true)}
-            className="absolute -bottom-1 -right-1 bg-brand-orange text-white p-1.5 rounded-full border-[3px] border-white shadow-sm active:scale-90 transition-transform"
-          >
-            <Pencil size={14} strokeWidth={3} />
-          </button>
-        </div>
-        
-        <div className="mt-4 w-full">
-          <div className="flex items-center justify-center gap-2">
-            <h1 className="text-2xl font-black text-brand-dark tracking-tight">{firstName}</h1>
-            <button onClick={() => setShowEditModal(true)} className="p-1 hover:bg-gray-100 rounded-full text-brand-dark/20 hover:text-brand-orange transition-colors"><Pencil size={16} /></button>
-          </div>
-          <div className="flex items-center justify-center gap-2 mt-1.5">
-            <div className="inline-flex items-center gap-1.5 bg-brand-purple/10 text-brand-purple px-2.5 py-0.5 rounded-full"><Trophy size={12} className="fill-brand-purple/20" /><span className="text-[10px] font-bold uppercase tracking-wider">{rank}</span></div>
-            <div className="inline-flex items-center gap-1 bg-brand-orange/10 text-brand-orange px-2.5 py-0.5 rounded-full"><Flame size={12} className="fill-brand-orange/20" /><span className="text-[10px] font-bold uppercase tracking-wider">{currentStreak} Day Streak</span></div>
-          </div>
-        </div>
-      </section>
+    <PageTransition className="flex-1 flex flex-col gap-6 p-5 pb-20 overflow-x-hidden bg-surface">
+      {/* HERO */}
+      <section className="relative">
+        <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-brand-purple via-purple-700 to-brand-dark p-6 pb-14 shadow-[0_16px_40px_-12px_rgba(108,99,255,0.55)]">
+          {/* decorative glow */}
+          <div className="absolute -right-8 -top-12 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -left-12 -bottom-6 w-36 h-36 bg-brand-orange/25 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute right-5 top-5 text-white/10 pointer-events-none"><Sparkles size={44} /></div>
 
-      {/* MY PROGRESS SECTION */}
-      <section className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="flex items-center justify-between px-1"><h3 className="text-[11px] font-black text-brand-dark/30 uppercase tracking-[0.2em]">My Progress</h3></div>
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="p-5 border-none shadow-card flex flex-col items-center justify-center gap-1.5 rounded-[24px] active:scale-95 transition-transform group bg-white">
-            <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform"><Star size={24} className="text-yellow-500 fill-yellow-200" /></div>
-            <div className="text-3xl font-black text-brand-dark">{totalXP}</div>
-            <div className="text-[10px] font-black text-brand-dark/30 uppercase tracking-[0.15em]">Total XP</div>
+          <div className="relative z-10 flex flex-col items-center text-center">
+            {/* avatar */}
+            <div className="relative group">
+              <div className="absolute inset-0 rounded-full bg-white/40 blur-md scale-110" />
+              <div className="relative w-24 h-24 rounded-full bg-white p-1 shadow-xl ring-4 ring-white/20 overflow-hidden">
+                <UserAvatar id={avatarId} className="w-full h-full" />
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="absolute inset-1 rounded-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Pencil size={18} className="text-white drop-shadow-md" />
+                </button>
+              </div>
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="absolute -bottom-1 -right-1 bg-brand-orange text-white p-1.5 rounded-full border-[3px] border-purple-700 shadow-lg active:scale-90 transition-transform"
+              >
+                <Pencil size={12} strokeWidth={3} />
+              </button>
+            </div>
+
+            {/* name */}
+            <div className="mt-3 flex items-center gap-1.5">
+              <h1 className="text-2xl font-black text-white tracking-tight drop-shadow-sm">{firstName}</h1>
+              <button onClick={() => setShowEditModal(true)} className="p-1 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors"><Pencil size={14} /></button>
+            </div>
+
+            {/* chips */}
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white px-3 py-1 rounded-full border border-white/10">
+                <Crown size={12} className="text-yellow-300 fill-yellow-300/40" />
+                <span className="text-[10px] font-black uppercase tracking-wider">{rank}</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white px-3 py-1 rounded-full border border-white/10">
+                <Flame size={12} className="text-brand-orange fill-brand-orange/50" />
+                <span className="text-[10px] font-black uppercase tracking-wider">{currentStreak} Day</span>
+              </div>
+            </div>
+
+            {/* progress to next rank */}
+            <div className="w-full mt-5 px-1">
+              <div className="flex items-center justify-between mb-1.5 px-0.5">
+                <span className="text-[9px] font-black text-white/55 uppercase tracking-widest">{nextTier ? `Next · ${nextTier.name}` : "Top Rank"}</span>
+                <span className="text-[9px] font-black text-white/85 uppercase tracking-widest">{nextTier ? `${xpToNext} XP to go` : "★ Maxed Out"}</span>
+              </div>
+              <div className="h-2.5 w-full bg-black/25 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-brand-orange to-yellow-300 rounded-full transition-all duration-700 ease-out" style={{ width: `${rankProgress}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* floating stats */}
+        <div className="relative z-20 -mt-9 px-3 grid grid-cols-3 gap-2.5">
+          <Card className="p-3 border-none shadow-card flex flex-col items-center gap-0.5 rounded-[18px] bg-white active:scale-95 transition-transform group">
+            <div className="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center mb-0.5 group-hover:scale-110 transition-transform"><Star size={15} className="text-yellow-500 fill-yellow-200" /></div>
+            <div className="text-lg font-black text-brand-dark leading-none">{totalXP}</div>
+            <div className="text-[8px] font-black text-brand-dark/30 uppercase tracking-widest">Total XP</div>
           </Card>
-          <Card className="p-5 border-none shadow-card flex flex-col items-center justify-center gap-1.5 rounded-[24px] active:scale-95 transition-transform group bg-white">
-            <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform"><Flame size={24} className="text-brand-orange fill-brand-orange/20" /></div>
-            <div className="text-3xl font-black text-brand-dark">{currentStreak}</div>
-            <div className="text-[10px] font-black text-brand-dark/30 uppercase tracking-[0.15em]">Day Streak</div>
+          <Card className="p-3 border-none shadow-card flex flex-col items-center gap-0.5 rounded-[18px] bg-white active:scale-95 transition-transform group">
+            <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center mb-0.5 group-hover:scale-110 transition-transform"><Flame size={15} className="text-brand-orange fill-brand-orange/20" /></div>
+            <div className="text-lg font-black text-brand-dark leading-none">{currentStreak}</div>
+            <div className="text-[8px] font-black text-brand-dark/30 uppercase tracking-widest">Streak</div>
+          </Card>
+          <Card className="p-3 border-none shadow-card flex flex-col items-center gap-0.5 rounded-[18px] bg-white active:scale-95 transition-transform group">
+            <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center mb-0.5 group-hover:scale-110 transition-transform"><Trophy size={15} className="text-brand-purple fill-brand-purple/20" /></div>
+            <div className="text-lg font-black text-brand-dark leading-none">{maxStreak}</div>
+            <div className="text-[8px] font-black text-brand-dark/30 uppercase tracking-widest">Best</div>
           </Card>
         </div>
-        <Card className="p-6 border-none shadow-card bg-gradient-to-br from-brand-purple to-purple-800 text-white overflow-hidden relative rounded-[28px]">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" /><div className="absolute -left-4 -bottom-4 w-24 h-24 bg-brand-orange/20 rounded-full blur-2xl" />
-          <div className="relative z-10">
-            <div className="flex justify-between items-end mb-4"><div><h3 className="font-bold text-white/80 text-xs uppercase tracking-wider mb-1">Current Rank</h3><div className="text-2xl font-black">{rank}</div></div></div>
-            <ProgressBar progress={60} color="bg-white" height="h-3" showLabel />
-            <p className="text-[10px] font-bold text-center mt-3 text-white/60 uppercase tracking-widest">Keep learning to rank up!</p>
-          </div>
-        </Card>
       </section>
 
       {/* BADGES & ITEMS SECTION - COLLAPSIBLE */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-2.5">
         <button onClick={() => setBadgesExpanded(!badgesExpanded)} className="w-full text-left focus:outline-none active:scale-[0.99] transition-transform">
-          <Card className={cn("p-4 border-none shadow-sm flex items-center justify-between transition-all rounded-[24px]", badgesExpanded ? "bg-white" : "bg-white/50")}>
+          <Card className={cn("p-3 border-none shadow-card flex items-center justify-between transition-all rounded-[20px]", badgesExpanded ? "bg-white" : "bg-white/70")}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-yellow-50 flex items-center justify-center"><Medal size={20} className="text-yellow-600" /></div>
-              <div className="flex flex-col"><span className="text-[15px] font-bold text-brand-dark">Badges & Items</span><span className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-wider">{badgesExpanded ? "Tap to hide" : unopenedLootBoxes > 0 ? `${unopenedLootBoxes} Chests available` : "View achievements"}</span></div>
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-yellow-100 to-amber-50 ring-1 ring-yellow-200/50 flex items-center justify-center shadow-inner"><Medal size={19} className="text-yellow-600" /></div>
+              <div className="flex flex-col"><span className="text-sm font-black text-brand-dark">Badges & Items</span><span className="text-[9px] font-bold text-brand-dark/30 uppercase tracking-wider">{badgesExpanded ? "Tap to hide" : unopenedLootBoxes > 0 ? `${unopenedLootBoxes} Chests available` : "View achievements"}</span></div>
             </div>
-            <div className="flex items-center gap-3">
-              {unopenedLootBoxes > 0 && !badgesExpanded && <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse" />}
-              <ChevronRight size={18} className={cn("text-brand-dark/20 transition-transform duration-300", badgesExpanded && "rotate-90")} />
+            <div className="flex items-center gap-2">
+              {unopenedLootBoxes > 0 && !badgesExpanded && <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse shadow-sm shadow-red-300" />}
+              <div className="w-7 h-7 rounded-full bg-brand-dark/5 flex items-center justify-center"><ChevronRight size={15} className={cn("text-brand-dark/40 transition-transform duration-300", badgesExpanded && "rotate-90")} /></div>
             </div>
           </Card>
         </button>
         {badgesExpanded && (
-          <div className="flex flex-col gap-6 animate-in slide-in-from-top-2 duration-300 pt-2 px-1">
+          <div className="flex flex-col gap-4 animate-in slide-in-from-top-2 duration-300 pt-1 px-0.5">
             {unopenedLootBoxes > 0 && (
-              <Card className="p-5 border-2 border-yellow-200 bg-yellow-50 shadow-card flex items-center justify-between overflow-hidden relative rounded-[24px]">
-                <div className="absolute -right-2 top-0 opacity-10"><Gift size={80} className="text-yellow-600" /></div>
-                <div className="flex items-center gap-4 relative z-10">
-                  <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm"><Gift size={32} className="text-yellow-500 animate-bounce" /></div>
-                  <div className="flex flex-col"><h3 className="font-black text-brand-dark text-sm">Reward Chest</h3><p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{unopenedLootBoxes} Available</p></div>
+              <Card className="p-4 border-2 border-yellow-200 bg-yellow-50 shadow-sm flex items-center justify-between overflow-hidden relative rounded-[20px]">
+                <div className="absolute -right-2 top-0 opacity-10"><Gift size={60} className="text-yellow-600" /></div>
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm"><Gift size={24} className="text-yellow-500 animate-bounce" /></div>
+                  <div className="flex flex-col"><h3 className="font-black text-brand-dark text-[13px]">Reward Chest</h3><p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{unopenedLootBoxes} Available</p></div>
                 </div>
-                <Button onClick={() => openLootBox()} className="bg-yellow-500 hover:bg-yellow-600 text-white font-black h-9 px-5 rounded-xl border-none shadow-sm relative z-10 text-[11px] tracking-wider transition-all active:scale-95">OPEN</Button>
+                <Button onClick={() => openLootBox()} className="bg-yellow-500 hover:bg-yellow-600 text-white font-black h-8 px-4 rounded-lg shadow-sm relative z-10 text-[10px] tracking-wider transition-all active:scale-95">OPEN</Button>
               </Card>
             )}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="p-4 border-none shadow-card flex flex-col items-center text-center gap-2 relative overflow-hidden group rounded-[20px] bg-white"><div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-1 group-hover:scale-110 transition-transform"><Shield className="text-blue-500" size={24} /></div><h3 className="font-black text-xs text-brand-dark">Streak Shield</h3><div className="absolute top-2 right-2 bg-brand-dark/5 text-[9px] font-black px-1.5 py-0.5 rounded-full text-brand-dark/40">x0</div></Card>
-              <Card className="p-4 border-none shadow-card flex flex-col items-center text-center gap-2 relative overflow-hidden group rounded-[20px] bg-white"><div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mb-1 group-hover:scale-110 transition-transform"><Zap className="text-purple-500" size={24} /></div><h3 className="font-black text-xs text-brand-dark">Double XP</h3><div className="absolute top-2 right-2 bg-brand-dark/5 text-[9px] font-black px-1.5 py-0.5 rounded-full text-brand-dark/40">x0</div></Card>
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="p-3 border-none shadow-sm flex flex-col items-center text-center gap-1.5 relative overflow-hidden group rounded-[16px] bg-white"><div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-0.5 group-hover:scale-110 transition-transform"><Shield className="text-blue-500" size={20} /></div><h3 className="font-black text-[11px] text-brand-dark">Streak Shield</h3><div className="absolute top-1.5 right-1.5 bg-brand-dark/5 text-[8px] font-black px-1.5 py-0.5 rounded-full text-brand-dark/30">x0</div></Card>
+              <Card className="p-3 border-none shadow-sm flex flex-col items-center text-center gap-1.5 relative overflow-hidden group rounded-[16px] bg-white"><div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-0.5 group-hover:scale-110 transition-transform"><Zap className="text-purple-500" size={20} /></div><h3 className="font-black text-[11px] text-brand-dark">Double XP</h3><div className="absolute top-1.5 right-1.5 bg-brand-dark/5 text-[8px] font-black px-1.5 py-0.5 rounded-full text-brand-dark/30">x0</div></Card>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {ACHIEVEMENTS.map(ach => (
-                <Card key={ach.id} className={cn("p-4 border-none shadow-card flex flex-col items-center text-center gap-2 group active:scale-95 transition-transform rounded-[20px] bg-white", !ach.unlocked && "opacity-40 grayscale")}><div className={cn("w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-1 shadow-inner ring-4 ring-offset-2 transition-transform group-hover:rotate-12", ach.unlocked ? "bg-yellow-50 ring-yellow-100 ring-offset-white" : "bg-gray-100 ring-gray-50 ring-offset-white")}>{ach.icon}</div><h3 className="font-black text-sm leading-tight text-brand-dark">{ach.title}</h3><p className="text-[10px] font-bold text-brand-dark/40 uppercase tracking-tight">{ach.description}</p></Card>
+                <Card key={ach.id} className={cn("p-3 border-none shadow-sm flex flex-col items-center text-center gap-1.5 group active:scale-95 transition-transform rounded-[16px] bg-white", !ach.unlocked && "opacity-40 grayscale")}><div className={cn("w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-0.5 shadow-inner ring-2 ring-offset-1 transition-transform group-hover:rotate-12", ach.unlocked ? "bg-yellow-50 ring-yellow-100 ring-offset-white" : "bg-gray-100 ring-gray-50 ring-offset-white")}>{ach.icon}</div><h3 className="font-black text-[12px] leading-tight text-brand-dark">{ach.title}</h3><p className="text-[9px] font-bold text-brand-dark/30 uppercase tracking-tight">{ach.description}</p></Card>
               ))}
             </div>
           </div>
@@ -464,47 +598,33 @@ export default function ProfilePage() {
       </section>
 
       {/* REWARD STORE SECTION - COLLAPSIBLE */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-2.5">
         <button onClick={() => setStoreExpanded(!storeExpanded)} className="w-full text-left focus:outline-none active:scale-[0.99] transition-transform">
-          <Card className={cn("p-4 border-none shadow-sm flex items-center justify-between transition-all rounded-[24px]", storeExpanded ? "bg-white" : "bg-white/50")}>
+          <Card className={cn("p-3 border-none shadow-card flex items-center justify-between transition-all rounded-[20px]", storeExpanded ? "bg-white" : "bg-white/70")}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center"><Store size={20} className="text-brand-orange" /></div>
-              <div className="flex flex-col"><span className="text-[15px] font-bold text-brand-dark">Reward Store</span><span className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-wider">{storeExpanded ? "Tap to hide" : "Unlock new features"}</span></div>
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-50 ring-1 ring-orange-200/50 flex items-center justify-center shadow-inner"><Store size={19} className="text-brand-orange" /></div>
+              <div className="flex flex-col"><span className="text-sm font-black text-brand-dark">Reward Store</span><span className="text-[9px] font-bold text-brand-dark/30 uppercase tracking-wider">{storeExpanded ? "Tap to hide" : "Unlock new features"}</span></div>
             </div>
-            <ChevronRight size={18} className={cn("text-brand-dark/20 transition-transform duration-300", storeExpanded && "rotate-90")} />
+            <div className="w-7 h-7 rounded-full bg-brand-dark/5 flex items-center justify-center"><ChevronRight size={15} className={cn("text-brand-dark/40 transition-transform duration-300", storeExpanded && "rotate-90")} /></div>
           </Card>
         </button>
         {storeExpanded && (
-          <div className="flex flex-col gap-6 animate-in slide-in-from-top-2 duration-300 pt-2 px-1">
-            <Card className="p-5 border-none shadow-card flex items-center justify-between bg-brand-orange text-white relative overflow-hidden rounded-[24px]">
-               <div className="absolute -right-4 -top-4 opacity-10"><Store size={100} /></div>
-               <div className="relative z-10"><div className="font-bold text-xs uppercase tracking-widest text-white/80">Wallet</div><div className="flex items-center gap-1 font-black text-3xl tracking-tight mt-1">{totalXP} <span className="text-lg opacity-80">XP</span></div></div>
-               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center relative z-10 backdrop-blur-sm shadow-inner"><Wallet className="fill-white/20 text-white" size={24} /></div>
+          <div className="flex flex-col gap-4 animate-in slide-in-from-top-2 duration-300 pt-1 px-0.5">
+            <Card className="p-4 border-none shadow-[0_10px_28px_-8px_rgba(255,107,53,0.55)] flex items-center justify-between bg-gradient-to-br from-brand-orange via-orange-500 to-orange-600 text-white relative overflow-hidden rounded-[20px]">
+               <div className="absolute -right-6 -top-8 w-28 h-28 bg-white/15 rounded-full blur-xl" />
+               <div className="absolute -right-4 -top-4 opacity-10"><Store size={80} /></div>
+               <div className="relative z-10"><div className="font-bold text-[9px] uppercase tracking-widest text-white/70">Wallet Balance</div><div className="flex items-center gap-1 font-black text-2xl tracking-tight">{totalXP} <span className="text-sm opacity-60">XP</span></div></div>
+               <div className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center relative z-10 backdrop-blur-sm shadow-inner ring-1 ring-white/20"><Wallet className="fill-white/20 text-white" size={20} /></div>
             </Card>
-            <div className="grid grid-cols-2 gap-3 pb-4">
+            <div className="grid grid-cols-2 gap-2.5 pb-2">
               {UNLOCK_ROADMAP.map((reward, index) => {
                 const canAfford = totalXP >= reward.xp;
                 return (
-                  <Card key={index} className="p-3 border-none shadow-sm flex flex-col items-center text-center rounded-[20px] bg-white group active:scale-[0.95] transition-transform">
-                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-xl mb-2 shadow-inner group-hover:scale-110 transition-transform">
-                      {reward.icon}
-                    </div>
-                    
+                  <Card key={index} className="p-2.5 border-none shadow-sm flex flex-col items-center text-center rounded-[18px] bg-white group active:scale-[0.95] transition-transform">
+                    <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-lg mb-1.5 shadow-inner group-hover:scale-110 transition-transform">{reward.icon}</div>
                     <div className="flex-1 flex flex-col w-full">
-                      <h3 className="font-bold text-[12px] leading-tight text-brand-dark mb-1 min-h-[32px] flex items-center justify-center">
-                        {reward.title}
-                      </h3>
-                      
-                      <button 
-                        disabled={!canAfford}
-                        onClick={() => canAfford && toast.success(`${reward.title} Claimed!`, { icon: reward.icon })}
-                        className={cn(
-                          "w-full h-8 mt-1 text-[9px] font-black tracking-widest uppercase border-none transition-all active:scale-95 rounded-lg",
-                          canAfford ? "bg-brand-orange text-white shadow-sm" : "bg-gray-100 text-gray-400"
-                        )}
-                      >
-                        {canAfford ? "Claim" : `${reward.xp} XP`}
-                      </button>
+                      <h3 className="font-bold text-[11px] leading-tight text-brand-dark mb-1 min-h-[28px] flex items-center justify-center">{reward.title}</h3>
+                      <button disabled={!canAfford} onClick={() => canAfford && toast.success(`${reward.title} Claimed!`, { icon: reward.icon })} className={cn("w-full h-7 mt-0.5 text-[8px] font-black tracking-widest uppercase border-none transition-all active:scale-95 rounded-lg", canAfford ? "bg-brand-orange text-white" : "bg-gray-100 text-gray-400")}>{canAfford ? "Claim" : `${reward.xp} XP`}</button>
                     </div>
                   </Card>
                 );
@@ -515,18 +635,18 @@ export default function ProfilePage() {
       </section>
 
       {/* ACCOUNT & SETTINGS SECTION - ALWAYS VISIBLE */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between px-1"><h3 className="text-[11px] font-black text-brand-dark/30 uppercase tracking-[0.2em]">Account & Settings</h3></div>
-        <div className="flex flex-col gap-2.5">
-          <Link href="/progress"><Card className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-all cursor-pointer shadow-card active:scale-[0.98] rounded-[20px] bg-white group"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center group-active:scale-90 transition-transform"><BarChart2 size={20} className="text-brand-orange" /></div><span className="text-[15px] font-bold text-brand-dark">My Progress & Activity</span></div><ChevronRight size={18} className="text-brand-dark/20" /></Card></Link>
-          <Card onClick={toggleReminders} className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-all cursor-pointer shadow-card active:scale-[0.98] rounded-[20px] bg-white group"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-2xl bg-purple-50 flex items-center justify-center group-active:scale-90 transition-transform"><Bell size={20} className={remindersEnabled ? "text-brand-purple" : "text-brand-dark/20"} /></div><span className="text-[15px] font-bold text-brand-dark">Daily Reminders</span></div><span className={`text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors uppercase tracking-wider ${remindersEnabled ? 'text-brand-purple bg-brand-purple/10' : 'text-brand-dark/30 bg-brand-dark/5'}`}>{remindersEnabled ? '8:30 PM' : 'Off'}</span></Card>
-          <Card onClick={toggleDarkMode} className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-all cursor-pointer shadow-card active:scale-[0.98] rounded-[20px] bg-white group"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-2xl bg-brand-dark/5 flex items-center justify-center group-active:scale-90 transition-transform"><Moon size={20} className={darkMode ? "text-brand-purple" : "text-brand-dark/30"} /></div><span className="text-[15px] font-bold text-brand-dark">Dark Mode</span></div><div className={`w-10 h-5 rounded-full relative transition-colors ${darkMode ? 'bg-brand-purple' : 'bg-brand-dark/10'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${darkMode ? 'left-5.5' : 'left-0.5'}`}></div></div></Card>
-          <Card onClick={() => setShowSecurityView(true)} className="p-4 flex items-center justify-between border-none hover:bg-white/60 transition-all cursor-pointer shadow-card active:scale-[0.98] rounded-[20px] bg-white group"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center group-active:scale-90 transition-transform"><Shield size={20} className="text-slate-400 group-hover:text-brand-purple transition-colors" /></div><span className="text-[15px] font-bold text-brand-dark">Privacy & Security</span></div><ChevronRight size={18} className="text-brand-dark/20" /></Card>
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 px-1"><span className="w-1 h-3.5 rounded-full bg-gradient-to-b from-brand-orange to-brand-purple" /><h3 className="text-[10px] font-black text-brand-dark/30 uppercase tracking-[0.15em]">Account & Settings</h3></div>
+        <div className="flex flex-col gap-2">
+          <Link href="/progress"><Card className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center group-active:scale-90 transition-transform"><BarChart2 size={18} className="text-brand-orange" /></div><span className="text-[14px] font-bold text-brand-dark">My Activity</span></div><ChevronRight size={16} className="text-brand-dark/20" /></Card></Link>
+          <Card onClick={() => setShowRemindersModal(true)} className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center group-active:scale-90 transition-transform"><Bell size={18} className={remindersEnabled ? "text-brand-purple" : "text-brand-dark/20"} /></div><span className="text-[14px] font-bold text-brand-dark">Reminders</span></div><span className={`text-[9px] font-black px-2 py-1 rounded-md transition-colors uppercase tracking-wider ${remindersEnabled ? 'text-brand-purple bg-brand-purple/10' : 'text-brand-dark/30 bg-brand-dark/5'}`}>{remindersEnabled ? formatReminderTime(reminderTime) : 'Off'}</span></Card>
+          <Card onClick={toggleDarkMode} className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-2xl bg-brand-dark/5 flex items-center justify-center group-active:scale-90 transition-transform"><Moon size={20} className={darkMode ? "text-brand-purple" : "text-brand-dark/30"} /></div><span className="text-[15px] font-bold text-brand-dark">Dark Mode</span></div><div className={`w-10 h-5 rounded-full relative transition-colors ${darkMode ? 'bg-brand-purple' : 'bg-brand-dark/10'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${darkMode ? 'left-5.5' : 'left-0.5'}`}></div></div></Card>
+          <Card onClick={() => setShowSecurityView(true)} className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center group-active:scale-90 transition-transform"><Shield size={18} className="text-slate-400 group-hover:text-brand-purple transition-colors" /></div><span className="text-[14px] font-bold text-brand-dark">Privacy & Security</span></div><ChevronRight size={16} className="text-brand-dark/20" /></Card>
         </div>
       </section>
 
       {/* SIGN OUT BUTTON */}
-      <Button variant="ghost" className="mt-4 border-2 border-slate-100 text-slate-400 hover:bg-slate-50 gap-2 font-black py-4 rounded-2xl bg-white shadow-sm active:scale-95 w-full uppercase tracking-widest text-xs" onClick={() => setShowSignOutConfirm(true)}><LogOut size={16} strokeWidth={3} />Sign Out</Button>
+      <Button variant="ghost" className="mt-2 border-2 border-slate-100 text-slate-400 hover:bg-slate-50 gap-2 font-black py-3.5 rounded-xl bg-white shadow-sm active:scale-95 w-full uppercase tracking-widest text-[10px]" onClick={() => setShowSignOutConfirm(true)}><LogOut size={14} strokeWidth={3} />Sign Out</Button>
 
       {renderModals()}
     </PageTransition>

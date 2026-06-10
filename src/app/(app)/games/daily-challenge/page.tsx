@@ -1,171 +1,223 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTransition from "@/components/ui/PageTransition";
-import { ArrowLeft, Calendar, Gift, Check, Flame, Trophy } from "lucide-react";
-import { MicButton } from "@/components/games/MicButton";
-import { useSpeech } from "@/hooks/useSpeech";
+import { ArrowLeft, Trophy, Flame } from "lucide-react";
 import { useGamification } from "@/context/GamificationContext";
+import { getFillBlanks, type FillBlank } from "@/lib/games/quizBank";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
-const DAILY_TASK = {
-  title: "Describe your best friend",
-  hint: "Talk about their name, how long you've known them, and why you like them.",
-  minWords: 10,
-  xp: 100
-};
+// ─────────────────────────────────────────────────────────────
+// FILL THE BLANK
+// A word is missing from the English sentence — pick the right one.
+// Builds sentence sense, not just isolated words.
+// ─────────────────────────────────────────────────────────────
+const ROUNDS = 8;
 
-export default function DailyChallengeGame() {
+type Phase = "intro" | "playing" | "gameover";
+
+export default function FillTheBlankGame() {
   const router = useRouter();
-  const { isRecording, transcript, startRecording, stopRecording, setTranscript } = useSpeech();
   const { awardXP } = useGamification();
-  
-  const [view, setView] = useState<'intro' | 'recording' | 'validating' | 'reward'>('intro');
-  const [wordCount, setWordCount] = useState(0);
+
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [rounds, setRounds] = useState<FillBlank[]>([]);
+  const [index, setIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const lockedRef = useRef(false);
+  const awardedRef = useRef(false);
+
+  const current = rounds[index];
+
+  const start = () => {
+    setRounds(getFillBlanks(ROUNDS));
+    setIndex(0);
+    setScore(0);
+    setStreak(0);
+    setCorrectCount(0);
+    setSelected(null);
+    lockedRef.current = false;
+    awardedRef.current = false;
+    setPhase("playing");
+  };
+
+  const answer = (option: string) => {
+    if (lockedRef.current || !current) return;
+    lockedRef.current = true;
+    setSelected(option);
+    const correct = option.toLowerCase() === current.answer.toLowerCase();
+    if (correct) {
+      const ns = streak + 1;
+      setStreak(ns);
+      setScore((s) => s + 10 + ns * 2);
+      setCorrectCount((c) => c + 1);
+    } else {
+      setStreak(0);
+    }
+    setTimeout(() => {
+      if (index + 1 >= rounds.length) {
+        setPhase("gameover");
+      } else {
+        setIndex((i) => i + 1);
+        setSelected(null);
+        lockedRef.current = false;
+      }
+    }, 1100);
+  };
 
   useEffect(() => {
-    setWordCount(transcript.split(' ').filter(w => w.length > 0).length);
-  }, [transcript]);
-
-  const handleSubmit = () => {
-    stopRecording();
-    setView('validating');
-    // Mock AI validation delay
-    setTimeout(() => {
-      awardXP(DAILY_TASK.xp, "Daily Challenge Completed!");
-      setView('reward');
-    }, 2000);
-  };
+    if (phase === "gameover" && !awardedRef.current) {
+      awardedRef.current = true;
+      if (score > 0) awardXP(score, "Fill the Blank!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[#FFF0EB] text-brand-black flex flex-col max-w-md mx-auto">
-        <header className="p-4 flex items-center justify-between sticky top-0 bg-[#FFF0EB]/80 backdrop-blur-md z-10">
-          <button onClick={() => router.push('/games')} className="p-2 -ml-2 rounded-full hover:bg-black/5">
-            <ArrowLeft size={24} />
+      <div className="min-h-screen bg-surface flex flex-col max-w-md mx-auto">
+        <header className="px-4 py-3 flex items-center justify-between bg-white shadow-sm z-10 sticky top-0">
+          <button
+            onClick={() => router.push("/games")}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 active:scale-90 transition-transform"
+          >
+            <ArrowLeft size={24} className="text-brand-dark" />
           </button>
-          <div className="flex gap-2 items-center bg-white px-3 py-1 rounded-full shadow-sm">
-             <Flame size={16} className="text-brand-orange" />
-             <span className="font-bold text-sm">3 Day Streak</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-brand-orange font-black">
+              <Flame size={18} className="fill-brand-orange/20" /> {streak}
+            </div>
+            <div className="flex items-center gap-1.5 text-brand-dark font-black">
+              <Trophy size={18} className="text-yellow-500 fill-yellow-400/30" /> {score}
+            </div>
           </div>
         </header>
 
-        {view === 'intro' && (
-          <div className="flex-1 flex flex-col p-6 items-center justify-center">
-            <div className="w-full max-w-sm">
-              <div className="bg-brand-orange text-white text-sm font-bold uppercase tracking-widest text-center py-2 rounded-t-2xl">
-                Daily Mission
-              </div>
-              <Card className="p-8 text-center rounded-t-none border-t-0 shadow-lg">
-                <Calendar size={50} className="text-brand-orange mx-auto mb-6" />
-                <h2 className="text-2xl font-black mb-2 leading-tight">{DAILY_TASK.title}</h2>
-                <p className="text-gray-500 mb-8">{DAILY_TASK.hint}</p>
-
-                <div className="bg-gray-50 rounded-xl p-4 mb-8">
-                  <p className="font-bold text-gray-700 text-sm mb-1">Reward</p>
-                  <div className="flex items-center justify-center gap-2 text-2xl font-black text-brand-orange">
-                    <Trophy size={24} /> +{DAILY_TASK.xp} XP
-                  </div>
+        <div className="flex-1 flex flex-col p-6">
+          {phase === "intro" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-200 text-4xl rotate-3">
+                  ✏️
                 </div>
-
-                <Button onClick={() => setView('recording')} className="w-full h-14 text-lg bg-brand-orange hover:bg-orange-600">
-                  Accept Challenge
+                <h2 className="text-3xl font-black text-brand-dark mb-2">Fill the Blank</h2>
+                <p className="text-muted font-bold mb-8 leading-relaxed">
+                  One word is missing from each English sentence. Pick the
+                  right one to complete it! 🧩
+                </p>
+                <Button onClick={start} fullWidth size="lg" className="text-lg h-14">
+                  Start Challenge
                 </Button>
               </Card>
             </div>
-          </div>
-        )}
+          )}
 
-        {view === 'recording' && (
-          <div className="flex-1 flex flex-col p-6">
-             <div className="mb-6 text-center">
-               <h2 className="text-xl font-bold mb-2">{DAILY_TASK.title}</h2>
-               <p className="text-sm text-gray-500">{DAILY_TASK.hint}</p>
-             </div>
-
-             <Card className="flex-1 p-6 flex flex-col items-center justify-center mb-6 relative overflow-hidden">
-               {isRecording && (
-                 <div className="absolute inset-0 bg-brand-orange/5 animate-pulse" />
-               )}
-               
-               <div className="w-full h-full flex items-center justify-center text-center">
-                 {transcript ? (
-                   <p className="text-xl text-gray-800 leading-relaxed font-medium z-10">
-                     "{transcript}"
-                   </p>
-                 ) : (
-                   <p className="text-gray-400 z-10">Tap the mic and start speaking...</p>
-                 )}
-               </div>
-
-               <div className="absolute bottom-4 right-4 bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-500">
-                 {wordCount} / {DAILY_TASK.minWords} words
-               </div>
-             </Card>
-
-             <div className="flex flex-col items-center gap-4">
-                <MicButton 
-                  isRecording={isRecording} 
-                  onToggle={() => {
-                    if (isRecording) stopRecording();
-                    else startRecording();
-                  }} 
-                />
-                <Button 
-                  disabled={wordCount < DAILY_TASK.minWords} 
-                  onClick={handleSubmit}
-                  className="w-full h-14"
-                >
-                  Submit Recording
-                </Button>
-             </div>
-          </div>
-        )}
-
-        {view === 'validating' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-16 h-16 border-4 border-brand-orange border-t-transparent rounded-full animate-spin mb-6" />
-            <h2 className="text-xl font-bold mb-2">Analyzing Speech...</h2>
-            <p className="text-gray-500">Checking vocabulary and grammar</p>
-          </div>
-        )}
-
-        {view === 'reward' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <Card className="p-8 w-full max-w-sm border-none shadow-2xl relative overflow-hidden bg-white">
-              {/* Confetti effect background */}
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-              
-              <div className="relative z-10 flex flex-col items-center">
-                <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                  <Gift size={50} className="text-yellow-500 animate-bounce" />
-                </div>
-                
-                <h2 className="text-3xl font-black mb-2">Awesome!</h2>
-                <p className="text-gray-500 mb-8 text-sm">Challenge completed successfully.</p>
-                
-                <div className="bg-orange-50 rounded-2xl p-6 w-full mb-8 border border-orange-100">
-                  <div className="text-sm font-bold text-orange-400 uppercase tracking-widest mb-1">Earned</div>
-                  <div className="text-5xl font-black text-brand-orange">
-                    +{DAILY_TASK.xp}
-                  </div>
-                  <div className="text-orange-500 font-medium mt-1">XP</div>
-                </div>
-
-                <div className="flex items-center justify-center gap-2 text-green-500 font-bold mb-8">
-                  <Check size={20} /> Come back tomorrow!
-                </div>
-
-                <Button onClick={() => router.push('/games')} className="w-full h-14 text-lg">
-                  Back to Arcade
-                </Button>
+          {phase === "playing" && current && (
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between mb-6">
+                <span className="text-[11px] font-black text-brand-dark/40 uppercase tracking-[0.2em]">
+                  Question {index + 1} / {rounds.length}
+                </span>
               </div>
-            </Card>
-          </div>
-        )}
 
+              {/* Hindi hint */}
+              <p className="text-center text-muted font-hindi text-lg font-bold mb-6">
+                {current.hindi}
+              </p>
+
+              {/* Sentence with blank */}
+              <div className="flex flex-wrap justify-center items-center gap-x-2 gap-y-3 mb-12 px-2">
+                {current.tokens.map((word, i) => {
+                  if (i === current.blankIndex) {
+                    const filled = selected ?? "";
+                    const correct = selected && selected.toLowerCase() === current.answer.toLowerCase();
+                    return (
+                      <span
+                        key={i}
+                        className={cn(
+                          "min-w-[80px] text-center px-3 py-1.5 rounded-xl font-black text-xl border-b-4",
+                          !selected && "border-brand-orange text-brand-orange/30 bg-orange-50/60",
+                          selected && correct && "border-green-500 text-green-600 bg-green-50",
+                          selected && !correct && "border-red-500 text-red-600 bg-red-50"
+                        )}
+                      >
+                        {selected ? (correct ? filled : current.answer) : "_____"}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span key={i} className="text-xl font-black text-brand-dark">
+                      {word}
+                    </span>
+                  );
+                })}
+              </div>
+
+              {/* Options */}
+              <div className="grid grid-cols-2 gap-3 mt-auto">
+                {current.options.map((opt) => {
+                  const isAnswer = opt.toLowerCase() === current.answer.toLowerCase();
+                  const isPicked = opt === selected;
+                  const revealed = selected !== null;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => answer(opt)}
+                      disabled={revealed}
+                      className={cn(
+                        "py-4 rounded-card font-black text-base border-2 transition-all active:scale-95",
+                        !revealed && "bg-white border-gray-100 text-brand-dark hover:border-brand-orange/40",
+                        revealed && isAnswer && "bg-green-500 border-green-500 text-white",
+                        revealed && isPicked && !isAnswer && "bg-red-500 border-red-500 text-white",
+                        revealed && !isPicked && !isAnswer && "opacity-50 border-gray-100 text-brand-dark"
+                      )}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {phase === "gameover" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <motion.div
+                  initial={{ scale: 0, rotate: -30 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-200"
+                >
+                  <Trophy size={42} className="text-white fill-white/30" />
+                </motion.div>
+                <h2 className="text-2xl font-black text-brand-dark mb-1">Challenge Complete!</h2>
+                <p className="text-muted font-bold mb-6">
+                  {correctCount} / {rounds.length} correct
+                </p>
+                <div className="text-5xl font-black text-brand-orange mb-8">
+                  +{score} <span className="text-2xl">XP</span>
+                </div>
+                <div className="flex gap-3 w-full">
+                  <Button variant="ghost" onClick={() => router.push("/games")} fullWidth>
+                    Exit
+                  </Button>
+                  <Button onClick={start} fullWidth>
+                    Play Again
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </PageTransition>
   );

@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Lock, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import Badge, { type BadgeVariant } from "@/components/ui/Badge";
 
 interface HomeChecklistProps {
   lessonDone: boolean;
@@ -43,63 +44,123 @@ export function HomeChecklist({ lessonDone, gameDone, speakingDone }: HomeCheckl
     },
   ];
 
+  const completedCount = steps.filter((s) => s.done).length;
+  const total = steps.length;
+  const allDone = completedCount === total;
+  const progressPct = Math.round((completedCount / total) * 100);
+
   return (
     <div className="space-y-3">
-      <h3 className="text-[17px] font-black text-brand-dark tracking-tight">What to do today? ✅</h3>
-      <div className="bg-white rounded-[22px] border border-[#F5EDE8] p-4 space-y-4 shadow-sm">
-        {steps.map((step) => {
-          const isDone = step.done;
-          const isNext = !isDone && step.prevDone;
-          const isLocked = !isDone && !step.prevDone;
+      <div className="flex items-center justify-between">
+        <h3 className="text-[17px] font-black text-brand-dark tracking-tight">What to do today? ✅</h3>
+        <span className="text-[11px] font-black text-brand-orange bg-orange-50 px-2.5 py-1 rounded-full">
+          {completedCount}/{total}
+        </span>
+      </div>
 
-          let badgeText = "";
-          let badgeClass = "";
-          let circleClass = "";
-          let icon = null;
+      <div className="bg-white rounded-[22px] border border-border p-4 shadow-card">
+        {/* Progress bar */}
+        <div className="mb-4">
+          <div className="h-2 w-full bg-orange-50 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-brand-orange to-brand-orange-light rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${Math.max(progressPct, 6)}%` }}
+            />
+          </div>
+        </div>
 
-          if (isDone) {
-            badgeText = "Done ✓";
-            badgeClass = "bg-green-50 text-green-600";
-            circleClass = "bg-green-100 text-green-600";
-            icon = <CheckCircle2 size={16} />;
-          } else if (isNext) {
-            badgeText = "Do it now";
-            badgeClass = "bg-orange-50 text-brand-orange";
-            circleClass = "bg-[#FFF0EB] text-brand-orange";
-            icon = <span className="text-sm font-bold">{step.id}</span>;
-          } else {
-            badgeText = "Locked";
-            badgeClass = "bg-gray-50 text-gray-400";
-            circleClass = "bg-gray-100 text-gray-400";
-            icon = <span className="text-sm font-bold">{step.id}</span>;
-          }
+        <div className="relative space-y-1">
+          {steps.map((step, idx) => {
+            const isDone = step.done;
+            const isNext = !isDone && step.prevDone;
+            const isLocked = !isDone && !step.prevDone;
+            const isLast = idx === steps.length - 1;
 
-          const content = (
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-3">
-                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", circleClass)}>
-                  {icon}
+            let badgeText = "";
+            let badgeVariant: BadgeVariant = "neutral";
+            let circleClass = "";
+            let icon: React.ReactNode = null;
+
+            if (isDone) {
+              badgeText = "Done";
+              badgeVariant = "done";
+              circleClass = "bg-green-500 text-white";
+              icon = <CheckCircle2 size={16} />;
+            } else if (isNext) {
+              badgeText = "Do it now";
+              badgeVariant = "active";
+              circleClass = "bg-[#FFF0EB] text-brand-orange ring-4 ring-brand-orange/10";
+              icon = <span className="text-sm font-black">{step.id}</span>;
+            } else {
+              badgeText = "Locked";
+              badgeVariant = "locked";
+              circleClass = "bg-gray-100 text-gray-400";
+              icon = <Lock size={13} />;
+            }
+
+            const content = (
+              <div className="flex items-center justify-between gap-2 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="relative z-10">
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all",
+                        circleClass
+                      )}
+                    >
+                      {icon}
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold transition-colors",
+                      isLocked ? "text-gray-400" : "text-brand-dark",
+                      isDone && "line-through decoration-green-400/60 text-brand-dark/60"
+                    )}
+                  >
+                    {step.name}
+                  </span>
                 </div>
-                <span className={cn("text-sm font-bold", isLocked ? "text-gray-400" : "text-brand-dark")}>
-                  {step.name}
-                </span>
+                <Badge variant={badgeVariant}>
+                  {badgeText}
+                  {isNext && <ArrowRight size={11} strokeWidth={3} />}
+                </Badge>
               </div>
-              <div className={cn("text-[10px] font-black px-2 py-0.5 rounded-md whitespace-nowrap transition-colors uppercase tracking-tight", badgeClass)}>
-                {badgeText}
-              </div>
-            </div>
-          );
-
-          if (isNext && step.link) {
-            return (
-              <Link key={step.id} href={step.link} className="block active:scale-[0.98] transition-transform">
-                {content}
-              </Link>
             );
-          }
 
-          return <div key={step.id}>{content}</div>;
-        })}
+            return (
+              <div key={step.id} className="relative">
+                {/* connecting journey line */}
+                {!isLast && (
+                  <div
+                    className={cn(
+                      "absolute left-[15px] top-[34px] bottom-[-6px] w-[2px] z-0",
+                      isDone ? "bg-green-200" : "bg-gray-100"
+                    )}
+                  />
+                )}
+                {isNext && step.link ? (
+                  <Link
+                    href={step.link}
+                    className="block rounded-xl -mx-1 px-1 active:scale-[0.98] hover:bg-orange-50/40 transition-all"
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  content
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Celebration footer when all done */}
+        {allDone && (
+          <div className="mt-3 flex items-center justify-center gap-2 bg-green-50 text-green-700 rounded-2xl py-2.5 text-sm font-bold">
+            <Sparkles size={15} />
+            Daily goal smashed! See you tomorrow 🎉
+          </div>
+        )}
       </div>
     </div>
   );

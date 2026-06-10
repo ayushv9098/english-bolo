@@ -21,7 +21,7 @@ interface GamificationState {
 
 const GamificationContext = createContext<GamificationState | undefined>(undefined);
 
-const RANKS = [
+export const RANKS = [
   { name: 'Beginner', minXP: 0 },
   { name: 'Speaker', minXP: 1000 },
   { name: 'Communicator', minXP: 3000 },

@@ -1,201 +1,253 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTransition from "@/components/ui/PageTransition";
-import { ArrowLeft, Skull, Shield, BookOpen, AlertTriangle } from "lucide-react";
-import { MicButton } from "@/components/games/MicButton";
-import { HeartsDisplay } from "@/components/games/HeartsDisplay";
-import { useSpeech } from "@/hooks/useSpeech";
+import { TimerBar } from "@/components/games/TimerBar";
+import { ArrowLeft, Heart, Trophy } from "lucide-react";
 import { useGamification } from "@/context/GamificationContext";
+import { makeVocabQuestion, type MCQ } from "@/lib/games/quizBank";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Mock Story
-const CHAPTERS = [
-  {
-    id: 1,
-    title: "Chapter 1: The Airport",
-    nodes: [
-      { type: "story", text: "You have just landed in London. You are tired, but you need to find your bags to survive the night." },
-      { type: "encounter", text: "A security officer stops you. 'Can I see your passport please?' What do you say?", expected: ["here is", "here it is", "yes", "of course"], failText: "He looks confused. You waste time explaining." },
-      { type: "story", text: "You make it past security and find the baggage claim. Suddenly, someone picks up your red suitcase!" },
-      { type: "boss", text: "BOSS ENCOUNTER! The person is walking away fast. Shout at them to stop!", expected: ["excuse me", "that is mine", "stop", "hey"], failText: "They walk away with your bag! Critical failure." }
-    ]
-  }
-];
+// ─────────────────────────────────────────────────────────────
+// SURVIVAL QUIZ
+// Endless vocab questions. 3 hearts. The timer gets faster as your
+// streak grows. How long can you survive?
+// ─────────────────────────────────────────────────────────────
+const MAX_HEARTS = 3;
+const QUESTION_TIME = 7;
+
+type Phase = "intro" | "playing" | "gameover";
 
 export default function SurvivalGame() {
   const router = useRouter();
-  const { isRecording, transcript, startRecording, stopRecording, setTranscript } = useSpeech();
   const { awardXP } = useGamification();
-  
-  const [view, setView] = useState<'intro' | 'playing' | 'gameover' | 'victory'>('intro');
-  const [hearts, setHearts] = useState(3);
-  const [currentNode, setCurrentNode] = useState(0);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  
-  const chapter = CHAPTERS[0];
-  const activeNode = chapter.nodes[currentNode];
 
-  const handleStart = () => {
-    setHearts(3);
-    setCurrentNode(0);
-    setFeedback(null);
-    setView('playing');
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [q, setQ] = useState<MCQ | null>(null);
+  const [hearts, setHearts] = useState(MAX_HEARTS);
+  const [streak, setStreak] = useState(0);
+  const [best, setBest] = useState(0);
+  const [score, setScore] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [duration, setDuration] = useState(QUESTION_TIME);
+  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const heartsRef = useRef(MAX_HEARTS);
+  const lockedRef = useRef(false);
+  const awardedRef = useRef(false);
+
+  const stopTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
   };
 
-  const advanceNode = () => {
-    if (currentNode + 1 >= chapter.nodes.length) {
-      setView('victory');
-      awardXP(150, "Survival Chapter Cleared!");
+  const nextQuestion = (nextStreak: number) => {
+    const t = Math.max(3, QUESTION_TIME - Math.floor(nextStreak / 3));
+    setQ(makeVocabQuestion());
+    setSelected(null);
+    setDuration(t);
+    setTimeLeft(t);
+    lockedRef.current = false;
+  };
+
+  const start = () => {
+    setPhase("playing");
+    setHearts(MAX_HEARTS);
+    heartsRef.current = MAX_HEARTS;
+    setStreak(0);
+    setScore(0);
+    awardedRef.current = false;
+    nextQuestion(0);
+  };
+
+  const loseHeart = () => {
+    heartsRef.current -= 1;
+    setHearts(heartsRef.current);
+    setStreak(0);
+    if (heartsRef.current <= 0) {
+      setPhase("gameover");
     } else {
-      setCurrentNode(prev => prev + 1);
-      setTranscript("");
-      setFeedback(null);
+      setTimeout(() => nextQuestion(0), 1200);
     }
   };
 
-  // Evaluate speech during encounters
-  useEffect(() => {
-    if (view === 'playing' && (activeNode.type === 'encounter' || activeNode.type === 'boss') && transcript && !isRecording) {
-      const lowerT = transcript.toLowerCase();
-      const isMatch = activeNode.expected?.some(e => lowerT.includes(e));
+  const handleTimeout = () => {
+    if (lockedRef.current) return;
+    lockedRef.current = true;
+    stopTimer();
+    setSelected("__timeout__");
+    loseHeart();
+  };
 
-      if (isMatch) {
-        setFeedback("Success! You handled it perfectly.");
-        setTimeout(() => advanceNode(), 2000);
-      } else {
-        setFeedback(activeNode.failText || "Wrong answer.");
-        const damage = activeNode.type === 'boss' ? 2 : 1;
-        setHearts(h => {
-          const newHearts = h - damage;
-          if (newHearts <= 0) {
-            setTimeout(() => setView('gameover'), 2000);
-          } else {
-            setTimeout(() => advanceNode(), 2000);
-          }
-          return newHearts;
-        });
-      }
+  // timer
+  useEffect(() => {
+    if (phase !== "playing" || !q) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 0.1) {
+          handleTimeout();
+          return 0;
+        }
+        return t - 0.1;
+      });
+    }, 100);
+    return stopTimer;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, phase]);
+
+  const answer = (option: string) => {
+    if (lockedRef.current || !q) return;
+    lockedRef.current = true;
+    stopTimer();
+    setSelected(option);
+    if (option === q.answer) {
+      const ns = streak + 1;
+      setStreak(ns);
+      setBest((b) => Math.max(b, ns));
+      setScore((s) => s + 10 + ns * 2); // streak bonus
+      setTimeout(() => nextQuestion(ns), 700);
+    } else {
+      loseHeart();
     }
-  }, [isRecording, transcript, view, activeNode]);
+  };
+
+  useEffect(() => {
+    if (phase === "gameover" && !awardedRef.current) {
+      awardedRef.current = true;
+      stopTimer();
+      if (score > 0) awardXP(score, "Survival Quiz!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  useEffect(() => () => stopTimer(), []);
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col max-w-md mx-auto relative overflow-hidden">
-        
-        {/* Gritty background */}
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] opacity-50 pointer-events-none" />
-
-        <header className="p-4 flex items-center justify-between z-10 sticky top-0 bg-gray-900/80 backdrop-blur-md border-b border-gray-800">
-          <button onClick={() => router.push('/games')} className="p-2 -ml-2 rounded-full hover:bg-gray-800">
-            <ArrowLeft size={24} />
+      <div className="min-h-screen bg-surface flex flex-col max-w-md mx-auto">
+        <header className="px-4 py-3 flex items-center justify-between bg-white shadow-sm z-10 sticky top-0">
+          <button
+            onClick={() => router.push("/games")}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 active:scale-90 transition-transform"
+          >
+            <ArrowLeft size={24} className="text-brand-dark" />
           </button>
-          {view === 'playing' && (
-            <div className="bg-black/50 px-4 py-2 rounded-full border border-gray-800">
-               <HeartsDisplay max={3} current={hearts} />
-            </div>
-          )}
-          <div className="w-10"></div>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: MAX_HEARTS }).map((_, i) => (
+              <Heart
+                key={i}
+                size={22}
+                className={cn(
+                  "transition-all",
+                  i < hearts ? "text-red-500 fill-red-500" : "text-gray-200 fill-gray-200"
+                )}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5 text-brand-dark font-black">
+            <Trophy size={18} className="text-yellow-500 fill-yellow-400/30" /> {score}
+          </div>
         </header>
 
-        {view === 'intro' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 z-10">
-            <Shield size={60} className="text-red-500 mb-6" />
-            <h1 className="text-4xl font-black text-center mb-4 tracking-wider uppercase text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-              Survival
-            </h1>
-            <p className="text-center text-gray-400 mb-12 text-lg">
-              3 Hearts. 1 Story. <br/>Speak correct English to survive.
-            </p>
-            <Button onClick={handleStart} className="w-full h-14 text-lg bg-red-600 hover:bg-red-700 text-white border-none shadow-[0_0_20px_rgba(220,38,38,0.4)]">
-              Start Chapter 1
-            </Button>
-          </div>
-        )}
-
-        {view === 'playing' && activeNode && (
-          <div className="flex-1 flex flex-col z-10">
-            
-            <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
-              {activeNode.type === 'story' && (
-                <BookOpen size={40} className="text-gray-500 mb-6" />
-              )}
-              {activeNode.type === 'encounter' && (
-                <AlertTriangle size={40} className="text-yellow-500 mb-6" />
-              )}
-              {activeNode.type === 'boss' && (
-                <Skull size={50} className="text-red-500 mb-6 animate-pulse" />
-              )}
-
-              <h2 className={`text-2xl font-medium leading-relaxed ${activeNode.type === 'boss' ? 'text-red-400 font-bold' : ''}`}>
-                {activeNode.text}
-              </h2>
-
-              {feedback && (
-                <div className={`mt-8 p-4 rounded-xl border ${feedback.includes('Success') ? 'bg-green-500/20 border-green-500 text-green-300' : 'bg-red-500/20 border-red-500 text-red-300'}`}>
-                  {feedback}
+        <div className="flex-1 flex flex-col p-6">
+          {phase === "intro" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-orange-400 rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-red-200 text-4xl rotate-3">
+                  ❤️
                 </div>
-              )}
-            </div>
-
-            <div className="p-6 bg-gray-950 border-t border-gray-800 flex flex-col items-center min-h-[200px] justify-center">
-              {activeNode.type === 'story' ? (
-                <Button onClick={advanceNode} className="w-full h-14 bg-white text-black hover:bg-gray-200 border-none">
-                  Continue
+                <h2 className="text-3xl font-black text-brand-dark mb-2">Survival Quiz</h2>
+                <p className="text-muted font-bold mb-8 leading-relaxed">
+                  3 lives. Endless questions. The clock speeds up as your
+                  streak grows. How long can you survive? 🔥
+                </p>
+                <Button onClick={start} fullWidth size="lg" className="text-lg h-14">
+                  Start Surviving
                 </Button>
-              ) : (
-                <div className="flex flex-col items-center w-full">
-                  {!feedback && (
-                    <>
-                      <MicButton 
-                        isRecording={isRecording} 
-                        onToggle={() => {
-                          if (isRecording) stopRecording();
-                          else startRecording();
-                        }} 
-                      />
-                      <p className="text-sm text-gray-400 mt-4 h-6 text-center">
-                        {transcript ? `"${transcript}"` : (isRecording ? "Listening..." : "Tap mic to answer")}
-                      </p>
-                    </>
-                  )}
+              </Card>
+            </div>
+          )}
+
+          {phase === "playing" && q && (
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black text-brand-dark/40 uppercase tracking-[0.2em]">
+                  Streak: {streak} 🔥
+                </span>
+                <span className="text-[11px] font-black text-brand-dark/40 uppercase tracking-[0.2em]">
+                  {Math.ceil(timeLeft)}s
+                </span>
+              </div>
+              <TimerBar duration={duration} timeLeft={timeLeft} className="mb-10" />
+
+              <div className="text-center mb-10">
+                <p className="text-[11px] font-black text-brand-dark/30 uppercase tracking-[0.2em] mb-2">
+                  What does this mean?
+                </p>
+                <h2 className="text-4xl font-black text-brand-dark font-hindi">{q.prompt}</h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-auto">
+                {q.options.map((opt) => {
+                  const isAnswer = opt === q.answer;
+                  const isPicked = opt === selected;
+                  const revealed = selected !== null;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => answer(opt)}
+                      disabled={revealed}
+                      className={cn(
+                        "py-5 rounded-card font-black text-base border-2 transition-all active:scale-95",
+                        !revealed && "bg-white border-gray-100 text-brand-dark hover:border-brand-orange/40",
+                        revealed && isAnswer && "bg-green-500 border-green-500 text-white",
+                        revealed && isPicked && !isAnswer && "bg-red-500 border-red-500 text-white",
+                        revealed && !isPicked && !isAnswer && "opacity-50 border-gray-100 text-brand-dark"
+                      )}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {phase === "gameover" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <AnimatePresence>
+                  <motion.div
+                    initial={{ scale: 0, rotate: -30 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 200 }}
+                    className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-200"
+                  >
+                    <Trophy size={42} className="text-white fill-white/30" />
+                  </motion.div>
+                </AnimatePresence>
+                <h2 className="text-2xl font-black text-brand-dark mb-1">Game Over!</h2>
+                <p className="text-muted font-bold mb-6">Best streak: {best} 🔥</p>
+                <div className="text-5xl font-black text-red-500 mb-8">
+                  +{score} <span className="text-2xl">XP</span>
                 </div>
-              )}
+                <div className="flex gap-3 w-full">
+                  <Button variant="ghost" onClick={() => router.push("/games")} fullWidth>
+                    Exit
+                  </Button>
+                  <Button onClick={start} fullWidth>
+                    Try Again
+                  </Button>
+                </div>
+              </Card>
             </div>
-
-          </div>
-        )}
-
-        {view === 'gameover' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 z-10 text-center">
-            <Skull size={80} className="text-red-500 mb-6" />
-            <h1 className="text-4xl font-black mb-4 text-red-500">YOU DIED</h1>
-            <p className="text-gray-400 mb-8">You ran out of hearts. Your English wasn't strong enough this time.</p>
-            <div className="flex gap-4 w-full">
-              <Button variant="ghost" onClick={() => router.push('/games')} className="flex-1 border-gray-700 text-white hover:bg-gray-800">
-                Flee
-              </Button>
-              <Button onClick={handleStart} className="flex-1 bg-red-600 hover:bg-red-700 border-none">
-                Retry
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {view === 'victory' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 z-10 text-center">
-            <Shield size={80} className="text-green-500 mb-6" />
-            <h1 className="text-4xl font-black mb-4 text-green-500">CHAPTER CLEARED</h1>
-            <p className="text-gray-300 mb-8">You survived the Airport! Your speaking skills are improving.</p>
-            <div className="text-5xl font-black text-yellow-500 mb-12">+150 XP</div>
-            <Button onClick={() => router.push('/games')} className="w-full h-14 bg-white text-black hover:bg-gray-200 border-none">
-              Back to Arcade
-            </Button>
-          </div>
-        )}
-
+          )}
+        </div>
       </div>
     </PageTransition>
   );

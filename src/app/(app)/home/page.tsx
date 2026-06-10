@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Mic, Headphones, ChevronRight, Bell, Flame, Star, Zap, BookOpen, Clock, Signal } from "lucide-react";
+import { Mic, Headphones, ChevronRight, Bell, Flame, Star, Zap, BookOpen, Clock, Signal, Target, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -61,23 +61,32 @@ export default async function HomePage() {
   const firstName = profile?.name ? profile.name.split(" ")[0] : "Learner";
   const avatarId = profile?.avatar_emoji || "G01";
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const streakCount = profile?.streak || 0;
+  const subline =
+    streakCount > 0
+      ? `🔥 ${streakCount}-day streak — keep it up!`
+      : "Let's start your daily goal 💪";
+
   return (
     <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       {/* TOP GREETING SECTION */}
-      <header className="flex justify-between items-center pt-8 px-5 pb-1 bg-transparent">
+      <header className="flex justify-between items-center pt-8 px-5 pb-1 bg-transparent animate-rise">
         <div className="flex flex-col">
           <h1 className="text-[23px] font-black text-brand-dark tracking-tighter leading-none">
-            Hey, {firstName}!
+            {greeting}, {firstName}!
           </h1>
+          <p className="text-[12px] font-semibold text-muted mt-1.5">{subline}</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Link href="/notifications">
             <div className="relative group">
-              <div className="bg-white shadow-card w-[34px] h-[34px] rounded-xl flex items-center justify-center border border-[#F5EDE8] active:scale-90 transition-all">
+              <div className="bg-white shadow-card w-[34px] h-[34px] rounded-xl flex items-center justify-center border border-border active:scale-90 transition-all">
                 <Bell size={17} className="text-brand-dark/40 group-hover:text-brand-orange transition-colors" />
                 {notificationCount !== null && notificationCount > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-gradient-to-br from-brand-orange to-[#FF8C61] text-white min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[8px] font-black border-2 border-white shadow-sm ring-2 ring-brand-orange/10">
+                  <div className="absolute -top-1 -right-1 bg-gradient-to-br from-brand-orange to-brand-orange-light text-white min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[8px] font-black border-2 border-white shadow-sm ring-2 ring-brand-orange/10">
                     {notificationCount > 9 ? '9+' : notificationCount}
                   </div>
                 )}
@@ -92,11 +101,13 @@ export default async function HomePage() {
       </header>
 
       <div className="flex flex-col gap-5 px-5 mt-2">
-        <GamificationDashboard />
+        <div className="animate-rise" style={{ animationDelay: "60ms" }}>
+          <GamificationDashboard />
+        </div>
 
         {/* DAILY LESSON CARD */}
         {nextLesson ? (
-          <section>
+          <section className="animate-rise" style={{ animationDelay: "120ms" }}>
             <DailyLessonCard 
               title={nextLesson.title}
               description={nextLesson.hindi_description}
@@ -109,7 +120,7 @@ export default async function HomePage() {
             />
           </section>
         ) : (
-          <section>
+          <section className="animate-rise" style={{ animationDelay: "120ms" }}>
             <Card className="p-6 text-center border-none shadow-sm flex flex-col items-center gap-3">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <Star className="text-green-500" size={32} />
@@ -128,28 +139,52 @@ export default async function HomePage() {
         )}
 
         {/* NEW SECTIONS */}
-        <HomeChecklist 
-          lessonDone={(lessonToday.count || 0) >= 1}
-          gameDone={(gameToday.count || 0) >= 1}
-          speakingDone={(speakingToday.count || 0) >= 1}
-        />
-        
-        <HomeGamesRow playedToday={(gameToday.count || 0) >= 1} />
+        <div className="animate-rise" style={{ animationDelay: "180ms" }}>
+          <HomeChecklist
+            lessonDone={(lessonToday.count || 0) >= 1}
+            gameDone={(gameToday.count || 0) >= 1}
+            speakingDone={(speakingToday.count || 0) >= 1}
+          />
+        </div>
+
+        <div className="animate-rise" style={{ animationDelay: "240ms" }}>
+          <HomeGamesRow playedToday={(gameToday.count || 0) >= 1} />
+        </div>
 
         {/* QUICK PRACTICE SECTION */}
-        <section className="flex flex-col gap-4 mb-5">
-          <h3 className="text-[18px] font-black text-brand-dark tracking-tight">Quick Practice</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <Link href="/practice/speak" className="block">
-              <div className="bg-[#E8F8EE] rounded-[20px] h-[84px] flex flex-col items-center justify-center gap-2.5 transition-transform active:scale-95 cursor-pointer shadow-sm border border-green-100/50">
-                <Mic className="text-green-600 w-5 h-5" />
-                <span className="text-green-600 font-bold text-sm">Speak</span>
+        <section className="flex flex-col gap-4 mb-5 animate-rise" style={{ animationDelay: "300ms" }}>
+          <h3 className="text-[18px] font-black text-brand-dark tracking-tight">Quick Practice ⚡</h3>
+          <div className="grid grid-cols-2 gap-3.5">
+            <Link href="/practice/speak" className="block group">
+              <div className="bg-tile-speak rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-green-100/60">
+                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <Mic className="text-green-600 w-5 h-5" />
+                </div>
+                <span className="text-green-700 font-bold text-sm">Speak</span>
               </div>
             </Link>
-            <Link href="/practice/listen" className="block">
-              <div className="bg-[#F0EBFF] rounded-[20px] h-[84px] flex flex-col items-center justify-center gap-2.5 transition-transform active:scale-95 cursor-pointer shadow-sm border border-purple-100/50">
-                <Headphones className="text-brand-purple w-5 h-5" />
+            <Link href="/practice/listen" className="block group">
+              <div className="bg-tile-listen rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-purple-100/60">
+                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <Headphones className="text-brand-purple w-5 h-5" />
+                </div>
                 <span className="text-brand-purple font-bold text-sm">Listen</span>
+              </div>
+            </Link>
+            <Link href="/games/daily-challenge" className="block group">
+              <div className="bg-tile-challenge rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-orange-100/60">
+                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <Target className="text-brand-orange w-5 h-5" />
+                </div>
+                <span className="text-brand-orange font-bold text-sm">Challenge</span>
+              </div>
+            </Link>
+            <Link href="/progress" className="block group">
+              <div className="bg-tile-progress rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-blue-100/60">
+                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <TrendingUp className="text-blue-600 w-5 h-5" />
+                </div>
+                <span className="text-blue-700 font-bold text-sm">Progress</span>
               </div>
             </Link>
           </div>

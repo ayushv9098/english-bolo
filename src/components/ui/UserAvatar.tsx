@@ -2,15 +2,18 @@
 
 import { cn } from "@/lib/utils";
 
-// Avatar Sprite Sheet Mapping (8 columns, 4 rows of content)
-export const AVATAR_MAP: Record<string, { x: number, y: number }> = {
-  "G01": { x: 0, y: 0 }, "G02": { x: 1, y: 0 }, "G03": { x: 2, y: 0 }, "G04": { x: 3, y: 0 }, "G05": { x: 4, y: 0 }, "G06": { x: 5, y: 0 }, "G07": { x: 6, y: 0 }, "G10": { x: 7, y: 0 },
-  "G11": { x: 0, y: 1 }, "G12": { x: 1, y: 1 }, "G13": { x: 2, y: 1 }, "G14": { x: 3, y: 1 }, "G17": { x: 4, y: 1 }, "G18": { x: 5, y: 1 }, "G19": { x: 6, y: 1 }, "G20": { x: 7, y: 1 },
-  "B01": { x: 0, y: 2 }, "B02": { x: 1, y: 2 }, "B03": { x: 2, y: 2 }, "B04": { x: 3, y: 2 }, "B05": { x: 4, y: 2 }, "B06": { x: 5, y: 2 }, "B17": { x: 6, y: 2 }, "B18": { x: 7, y: 2 },
-  "B11": { x: 0, y: 3 }, "B12": { x: 1, y: 3 }, "B13": { x: 2, y: 3 }, "B14": { x: 3, y: 3 }, "B15": { x: 4, y: 3 }, "B16": { x: 5, y: 3 }, "B19": { x: 6, y: 3 }, "B20": { x: 7, y: 3 },
-};
+// Each avatar is sliced from the source bundle into its own square PNG under
+// /public/avatars/<ID>.png (see scripts/slicing). Order here drives the picker grid.
+export const AVATAR_OPTIONS = [
+  "G01", "G02", "G03", "G04", "G05", "G06", "G07", "G10",
+  "G11", "G12", "G13", "G14", "G17", "G18", "G19", "G20",
+  "B01", "B02", "B03", "B04", "B05", "B06", "B17", "B18",
+  "B11", "B12", "B13", "B14", "B15", "B16", "B19", "B20",
+  "N01", "N02", "N03", "N04", "N05", "N06", "N07", "N08",
+  "N09", "N10", "N11", "N12", "N13", "N14", "N15", "N16",
+];
 
-export const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
+const AVATAR_SET = new Set(AVATAR_OPTIONS);
 
 interface UserAvatarProps {
   id: string | null;
@@ -19,43 +22,28 @@ interface UserAvatarProps {
 
 export function UserAvatar({ id, className = "" }: UserAvatarProps) {
   if (!id) return <div className={cn("bg-gray-100 rounded-full", className)} />;
-  
-  const pos = AVATAR_MAP[id];
-  
-  if (!pos) {
-    // Fallback to emoji or just displaying the text if it's not in the map
-    // Check if it's an emoji (common for old users)
+
+  // Known sliced avatar
+  if (AVATAR_SET.has(id)) {
     return (
-      <div className={cn("flex items-center justify-center bg-gray-50 rounded-full text-center overflow-hidden", className)}>
-        {id.length > 3 ? (
-            // If it looks like a URL
-            id.startsWith('http') ? <img src={id} alt="avatar" className="w-full h-full object-cover" /> : id
-        ) : id}
+      <div className={cn("overflow-hidden bg-white relative rounded-full", className)}>
+        <img
+          src={`/avatars/${id}.png`}
+          alt="avatar"
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
+        <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-full pointer-events-none" />
       </div>
     );
   }
 
-  // Calibration to give more "breathing room" (less cramped)
-  const xPercent = (pos.x * 100) / 7;
-  const yOffsets = [28, 49, 74, 95];
-  const yPercent = yOffsets[pos.y];
-
+  // Fallback for legacy values: external URL (onboarding) or emoji/text
   return (
-    <div 
-      className={cn("overflow-hidden bg-white flex items-center justify-center relative rounded-full", className)}
-    >
-      <div 
-        style={{
-          backgroundImage: `url('/avatars/bundle.png')`,
-          backgroundSize: '950% 600%', 
-          backgroundPosition: `${xPercent}% ${yPercent}%`,
-          backgroundRepeat: 'no-repeat',
-          width: '100%',
-          height: '100%',
-          imageRendering: 'auto',
-        }}
-      />
-      <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-full pointer-events-none" />
+    <div className={cn("flex items-center justify-center bg-gray-50 rounded-full text-center overflow-hidden", className)}>
+      {id.startsWith("http")
+        ? <img src={id} alt="avatar" className="w-full h-full object-cover" draggable={false} />
+        : id}
     </div>
   );
 }

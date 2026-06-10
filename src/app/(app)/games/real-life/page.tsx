@@ -1,273 +1,389 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTransition from "@/components/ui/PageTransition";
-import { ArrowLeft, MapPin, Coffee, Train, Stethoscope, Briefcase, CheckCircle2, Circle } from "lucide-react";
-import { MicButton } from "@/components/games/MicButton";
-import { useSpeech } from "@/hooks/useSpeech";
+import { ArrowLeft, Trophy, Coins } from "lucide-react";
 import { useGamification } from "@/context/GamificationContext";
+import { makeVocabQuestion, type MCQ } from "@/lib/games/quizBank";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Mock missions
-const MISSIONS = [
-  { 
-    id: 1, 
-    location: "Chai Shop", 
-    icon: Coffee,
-    title: "Order a Chai", 
-    objectives: [
-      { text: "Greet the seller", hints: ["hello", "hi", "good morning"] },
-      { text: "Ask for one tea", hints: ["one tea", "a cup of tea", "give me tea"] },
-      { text: "Ask for the price", hints: ["how much", "price", "cost"] }
-    ], 
-    npcStart: "Namaste! What can I get for you today?",
-    color: "bg-orange-500",
-    requiredXP: 0
-  },
-  { 
-    id: 2, 
-    location: "Railway Station", 
-    icon: Train,
-    title: "Buy a Ticket", 
-    objectives: [
-      { text: "Ask for a ticket to Delhi", hints: ["ticket", "delhi"] },
-      { text: "Ask the departure time", hints: ["time", "when", "depart"] }
-    ], 
-    npcStart: "Next in line! Where do you want to go?",
-    color: "bg-blue-500",
-    requiredXP: 1500
-  },
-  { 
-    id: 3, 
-    location: "Doctor", 
-    icon: Stethoscope,
-    title: "Explain your fever", 
-    objectives: [
-      { text: "Say you have a fever", hints: ["fever", "sick", "hot"] },
-      { text: "Ask for medicine", hints: ["medicine", "pills", "tablet"] }
-    ], 
-    npcStart: "Hello. What seems to be the problem today?",
-    color: "bg-green-500",
-    requiredXP: 3000
-  },
+// ─────────────────────────────────────────────────────────────
+// ENGLISH MONOPOLY
+// Roll the dice, move around the board, and conquer world cities by
+// answering English questions. Earn coins, build your empire.
+// ─────────────────────────────────────────────────────────────
+type TileType = "go" | "city" | "quiz" | "treasure" | "parking" | "toll";
+type Tile = { r: number; c: number; type: TileType; name: string; emoji: string; reward?: number };
+
+const BOARD: Tile[] = [
+  { r: 1, c: 1, type: "go", name: "GO", emoji: "🏁" },
+  { r: 1, c: 2, type: "city", name: "Mumbai", emoji: "🏙️" },
+  { r: 1, c: 3, type: "quiz", name: "Quiz", emoji: "❓" },
+  { r: 1, c: 4, type: "city", name: "London", emoji: "🎡" },
+  { r: 1, c: 5, type: "treasure", name: "Treasure", emoji: "💰", reward: 50 },
+  { r: 2, c: 5, type: "city", name: "Tokyo", emoji: "🗼" },
+  { r: 3, c: 5, type: "toll", name: "Toll", emoji: "🚧" },
+  { r: 4, c: 5, type: "city", name: "Dubai", emoji: "🏜️" },
+  { r: 5, c: 5, type: "parking", name: "Bonus", emoji: "🅿️" },
+  { r: 5, c: 4, type: "city", name: "Paris", emoji: "🥐" },
+  { r: 5, c: 3, type: "quiz", name: "Quiz", emoji: "❓" },
+  { r: 5, c: 2, type: "city", name: "Rome", emoji: "🏛️" },
+  { r: 5, c: 1, type: "treasure", name: "Treasure", emoji: "💰", reward: 50 },
+  { r: 4, c: 1, type: "city", name: "Sydney", emoji: "🌉" },
+  { r: 3, c: 1, type: "quiz", name: "Quiz", emoji: "❓" },
+  { r: 2, c: 1, type: "city", name: "Delhi", emoji: "🛕" },
 ];
 
-export default function RealLifeMissionsGame() {
+const DICE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+const TOTAL_ROLLS = 14;
+const START_COINS = 200;
+
+type Phase = "intro" | "playing" | "question" | "gameover";
+
+export default function MonopolyGame() {
   const router = useRouter();
-  const { isRecording, transcript, startRecording, stopRecording, setTranscript } = useSpeech();
-  const { totalXP, awardXP } = useGamification();
-  
-  const [view, setView] = useState<'map' | 'briefing' | 'mission' | 'result'>('map');
-  const [selectedMissionId, setSelectedMissionId] = useState<number | null>(null);
-  const [completedObjectives, setCompletedObjectives] = useState<boolean[]>([]);
-  const [messages, setMessages] = useState<{sender: 'ai' | 'user', text: string}[]>([]);
-  const [score, setScore] = useState(0);
+  const { awardXP } = useGamification();
 
-  const activeMission = MISSIONS.find(m => m.id === selectedMissionId);
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [pos, setPos] = useState(0);
+  const [coins, setCoins] = useState(START_COINS);
+  const [owned, setOwned] = useState<Set<number>>(new Set());
+  const [rollsLeft, setRollsLeft] = useState(TOTAL_ROLLS);
+  const [dice, setDice] = useState(1);
+  const [isRolling, setIsRolling] = useState(false);
+  const [message, setMessage] = useState("Roll the dice to begin!");
 
-  const startBriefing = (id: number) => {
-    setSelectedMissionId(id);
-    setView('briefing');
+  const [currentQ, setCurrentQ] = useState<MCQ | null>(null);
+  const [currentTile, setCurrentTile] = useState(-1);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const rollsRef = useRef(TOTAL_ROLLS);
+  const awardedRef = useRef(false);
+
+  const start = () => {
+    setPhase("playing");
+    setPos(0);
+    setCoins(START_COINS);
+    setOwned(new Set());
+    setRollsLeft(TOTAL_ROLLS);
+    rollsRef.current = TOTAL_ROLLS;
+    awardedRef.current = false;
+    setMessage("Roll the dice to begin!");
   };
 
-  const startMission = () => {
-    if (!activeMission) return;
-    setCompletedObjectives(new Array(activeMission.objectives.length).fill(false));
-    setMessages([{ sender: 'ai', text: activeMission.npcStart }]);
-    setTranscript("");
-    setView('mission');
+  const endTurn = () => {
+    if (rollsRef.current <= 0) setPhase("gameover");
+    else setPhase("playing");
   };
 
-  // Mock AI response logic based on transcript
-  useEffect(() => {
-    if (view === 'mission' && activeMission && transcript && !isRecording) {
-      const lowerTranscript = transcript.toLowerCase();
-      
-      setMessages(prev => [...prev, { sender: 'user', text: transcript }]);
-      setTranscript(""); // clear it
-
-      let newCompleted = [...completedObjectives];
-      let objectiveMet = false;
-
-      // Check against objectives
-      activeMission.objectives.forEach((obj, idx) => {
-        if (!newCompleted[idx]) {
-          const isMatch = obj.hints.some(hint => lowerTranscript.includes(hint));
-          if (isMatch) {
-            newCompleted[idx] = true;
-            objectiveMet = true;
-          }
-        }
-      });
-
-      setCompletedObjectives(newCompleted);
-
-      // AI Response
-      setTimeout(() => {
-        if (objectiveMet) {
-          const allDone = newCompleted.every(Boolean);
-          if (allDone) {
-            setMessages(prev => [...prev, { sender: 'ai', text: "Perfect, here you go. Have a great day!" }]);
-            setTimeout(() => {
-              setScore(50);
-              awardXP(50, "Mission Accomplished!");
-              setView('result');
-            }, 2000);
-          } else {
-            setMessages(prev => [...prev, { sender: 'ai', text: "Got it. What else?" }]);
-          }
+  const resolve = (idx: number) => {
+    const tile = BOARD[idx];
+    switch (tile.type) {
+      case "go":
+        setCoins((c) => c + 100);
+        setMessage("Landed on GO! +₹100 🏁");
+        endTurn();
+        break;
+      case "treasure":
+        setCoins((c) => c + (tile.reward ?? 50));
+        setMessage(`Treasure chest! +₹${tile.reward ?? 50} 💰`);
+        endTurn();
+        break;
+      case "parking":
+        setCoins((c) => c + 50);
+        setMessage("Free bonus! +₹50 🅿️");
+        endTurn();
+        break;
+      case "toll":
+        setCoins((c) => Math.max(0, c - 30));
+        setMessage("Toll booth! −₹30 🚧");
+        endTurn();
+        break;
+      case "city":
+        if (owned.has(idx)) {
+          setCoins((c) => c + 20);
+          setMessage(`${tile.name} is yours — rent +₹20`);
+          endTurn();
         } else {
-          setMessages(prev => [...prev, { sender: 'ai', text: "I'm sorry, I didn't quite catch that." }]);
+          setCurrentTile(idx);
+          setCurrentQ(makeVocabQuestion());
+          setSelected(null);
+          setPhase("question");
         }
-      }, 1000);
+        break;
+      case "quiz":
+        setCurrentTile(idx);
+        setCurrentQ(makeVocabQuestion());
+        setSelected(null);
+        setPhase("question");
+        break;
     }
-  }, [isRecording, transcript, view, activeMission, completedObjectives, setTranscript]);
+  };
+
+  const doMove = (d: number) => {
+    rollsRef.current -= 1;
+    setRollsLeft(rollsRef.current);
+    const raw = pos + d;
+    const passedGo = raw >= BOARD.length;
+    const np = raw % BOARD.length;
+    if (passedGo) {
+      setCoins((c) => c + 100);
+      setMessage("Passed GO! +₹100 🏁");
+    }
+    setPos(np);
+    setTimeout(() => resolve(np), 550);
+  };
+
+  const roll = () => {
+    if (phase !== "playing" || isRolling || rollsRef.current <= 0) return;
+    setIsRolling(true);
+    let ticks = 0;
+    const iv = setInterval(() => {
+      setDice(1 + Math.floor(Math.random() * 6));
+      ticks++;
+      if (ticks > 9) {
+        clearInterval(iv);
+        const final = 1 + Math.floor(Math.random() * 6);
+        setDice(final);
+        setIsRolling(false);
+        doMove(final);
+      }
+    }, 75);
+  };
+
+  const answer = (option: string) => {
+    if (!currentQ || selected) return;
+    setSelected(option);
+    const correct = option === currentQ.answer;
+    const tile = BOARD[currentTile];
+    setTimeout(() => {
+      if (correct) {
+        if (tile.type === "city") {
+          setOwned((o) => new Set(o).add(currentTile));
+          setCoins((c) => c + 80);
+          setMessage(`Conquered ${tile.name}! +₹80 🎉`);
+        } else {
+          setCoins((c) => c + 60);
+          setMessage("Correct! +₹60 ✨");
+        }
+      } else {
+        setMessage(`Oops! It was "${currentQ.answer}"`);
+      }
+      setCurrentQ(null);
+      setSelected(null);
+      setCurrentTile(-1);
+      endTurn();
+    }, 1200);
+  };
+
+  const finalScore = coins + owned.size * 25;
+
+  // Award XP once when the game ends.
+  useEffect(() => {
+    if (phase === "gameover" && !awardedRef.current) {
+      awardedRef.current = true;
+      awardXP(finalScore, "Monopoly Empire!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto">
-        <header className="p-4 flex items-center justify-between bg-white shadow-sm z-10 sticky top-0">
-          <button 
-            onClick={() => view === 'map' ? router.push('/games') : setView('map')} 
-            className="p-2 -ml-2 rounded-full hover:bg-gray-100"
+      <div className="min-h-screen bg-surface flex flex-col max-w-md mx-auto">
+        <header className="px-4 py-3 flex items-center justify-between bg-white shadow-sm z-10 sticky top-0">
+          <button
+            onClick={() => router.push("/games")}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 active:scale-90 transition-transform"
           >
-            <ArrowLeft size={24} className="text-gray-700" />
+            <ArrowLeft size={24} className="text-brand-dark" />
           </button>
-          <h1 className="font-bold text-lg text-brand-black">Real Life Missions</h1>
-          <div className="w-10"></div> {/* spacer */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-yellow-600 font-black">
+              <Coins size={18} className="fill-yellow-400/30" /> ₹{coins}
+            </div>
+            <div className="flex items-center gap-1.5 text-brand-dark font-black">
+              🏆 {owned.size}
+            </div>
+          </div>
         </header>
 
-        {view === 'map' && (
-          <div className="flex-1 p-4 relative overflow-hidden bg-[#E5E5F7]">
-            {/* Simple Map UI */}
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-400 to-transparent" style={{ backgroundSize: '20px 20px' }} />
-            
-            <div className="relative z-10 space-y-6 mt-8">
-              {MISSIONS.map((mission, index) => {
-                const isLocked = totalXP < mission.requiredXP;
-                return (
-                <div key={mission.id} className={`flex items-center gap-4 ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
-                  <button 
-                    onClick={() => !isLocked && startBriefing(mission.id)}
-                    disabled={isLocked}
-                    className={`relative flex flex-col items-center group ${isLocked ? 'opacity-50 grayscale' : ''}`}
+        <div className="flex-1 flex flex-col p-5">
+          {phase === "intro" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <div className="w-20 h-20 bg-gradient-to-br from-brand-purple to-[#8B7FFF] rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-purple-200 text-4xl rotate-3">
+                  🎲
+                </div>
+                <h2 className="text-3xl font-black text-brand-dark mb-2">English Monopoly</h2>
+                <p className="text-muted font-bold mb-8 leading-relaxed">
+                  Roll the dice, travel the world, and conquer cities by
+                  answering English questions. Build your empire! 🌍
+                </p>
+                <Button onClick={start} fullWidth size="lg" className="text-lg h-14">
+                  Start Game
+                </Button>
+              </Card>
+            </div>
+          )}
+
+          {(phase === "playing" || phase === "question") && (
+            <div className="flex flex-col gap-4">
+              {/* rolls left */}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black text-brand-dark/40 uppercase tracking-[0.2em]">
+                  Rolls left: {rollsLeft}
+                </span>
+                <span className="text-[11px] font-black text-brand-dark/40 uppercase tracking-[0.2em]">
+                  Empire score: {finalScore}
+                </span>
+              </div>
+
+              {/* BOARD */}
+              <div className="relative grid grid-cols-5 grid-rows-5 gap-1.5 aspect-square">
+                {BOARD.map((t, i) => (
+                  <div
+                    key={i}
+                    style={{ gridRow: t.r, gridColumn: t.c }}
+                    className={cn(
+                      "relative rounded-xl bg-white border-2 border-gray-100 flex flex-col items-center justify-center shadow-sm transition-all",
+                      owned.has(i) && "border-green-400 bg-green-50",
+                      pos === i && "border-brand-orange ring-2 ring-brand-orange/40 scale-105 z-10"
+                    )}
                   >
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg ${mission.color} hover:scale-105 transition-transform border-4 border-white`}>
-                      <mission.icon size={28} />
-                    </div>
-                    <div className="mt-2 bg-white px-3 py-1 rounded-full shadow-sm text-sm font-bold text-gray-800 border border-gray-100">
-                      {mission.location}
-                    </div>
-                    {isLocked && (
-                      <div className="absolute -top-2 -right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md">
-                        {mission.requiredXP} XP
-                      </div>
-                    )}
-                  </button>
-                </div>
-              )})}
-            </div>
-          </div>
-        )}
-
-        {view === 'briefing' && activeMission && (
-          <div className="flex-1 flex flex-col p-6 items-center justify-center">
-            <Card className="p-8 w-full">
-              <div className="flex justify-center mb-6">
-                 <div className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg ${activeMission.color}`}>
-                   <activeMission.icon size={40} />
-                 </div>
-              </div>
-              <h2 className="text-2xl font-black text-center mb-2">{activeMission.location}</h2>
-              <p className="text-gray-600 text-center mb-8">{activeMission.title}</p>
-              
-              <div className="space-y-4 mb-8">
-                <h3 className="font-bold text-gray-800 border-b pb-2">Your Objectives:</h3>
-                {activeMission.objectives.map((obj, i) => (
-                  <div key={i} className="flex gap-3 text-gray-700">
-                    <Circle size={20} className="text-gray-300 shrink-0 mt-0.5" />
-                    <span>{obj.text}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Button onClick={startMission} className="w-full h-14 text-lg">
-                Enter Location
-              </Button>
-            </Card>
-          </div>
-        )}
-
-        {view === 'mission' && activeMission && (
-          <div className="flex-1 flex flex-col bg-white">
-            {/* Objective Tracker */}
-            <div className="bg-gray-50 p-4 border-b">
-              <div className="flex flex-col gap-2">
-                {activeMission.objectives.map((obj, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    {completedObjectives[i] ? (
-                      <CheckCircle2 size={18} className="text-green-500" />
-                    ) : (
-                      <Circle size={18} className="text-gray-300" />
-                    )}
-                    <span className={completedObjectives[i] ? "text-gray-400 line-through" : "text-gray-800 font-medium"}>
-                      {obj.text}
+                    <span className="text-lg leading-none">{t.emoji}</span>
+                    <span className="text-[7px] font-black text-brand-dark/50 uppercase tracking-tight mt-0.5">
+                      {t.name}
                     </span>
+                    {pos === i && (
+                      <motion.span
+                        layoutId="token"
+                        className="absolute -top-2 -right-1 text-base drop-shadow"
+                      >
+                        🚀
+                      </motion.span>
+                    )}
+                    {owned.has(i) && (
+                      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full flex items-center justify-center text-white text-[8px] font-black">
+                        ✓
+                      </span>
+                    )}
                   </div>
                 ))}
+
+                {/* CENTER: dice + roll */}
+                <div
+                  style={{ gridArea: "2 / 2 / 5 / 5" }}
+                  className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-gradient-to-br from-brand-purple/5 to-brand-orange/5"
+                >
+                  <motion.div
+                    animate={isRolling ? { rotate: [0, 20, -20, 0], scale: [1, 1.15, 1] } : {}}
+                    transition={{ duration: 0.3, repeat: isRolling ? Infinity : 0 }}
+                    className="text-6xl leading-none"
+                  >
+                    {DICE_FACES[dice - 1]}
+                  </motion.div>
+                  <Button
+                    onClick={roll}
+                    disabled={isRolling || phase === "question"}
+                    size="md"
+                    className="px-6"
+                  >
+                    {isRolling ? "Rolling..." : "Roll 🎲"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* message ticker */}
+              <div className="text-center min-h-[24px]">
+                <p className="text-sm font-black text-brand-dark">{message}</p>
               </div>
             </div>
+          )}
 
-            {/* Chat Area */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4">
-               {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${msg.sender === 'user' ? 'bg-brand-orange text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
-                    <p className="text-[16px]">{msg.text}</p>
-                  </div>
+          {phase === "gameover" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <motion.div
+                  initial={{ scale: 0, rotate: -30 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-200"
+                >
+                  <Trophy size={42} className="text-white fill-white/30" />
+                </motion.div>
+                <h2 className="text-2xl font-black text-brand-dark mb-1">Empire Built!</h2>
+                <p className="text-muted font-bold mb-6">
+                  ₹{coins} coins · {owned.size} cities conquered
+                </p>
+                <div className="text-5xl font-black text-brand-purple mb-8">
+                  +{finalScore} <span className="text-2xl">XP</span>
                 </div>
-              ))}
-              {isRecording && transcript && (
-                <div className="flex justify-end opacity-70">
-                  <div className="max-w-[80%] bg-brand-orange text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
-                    <p>{transcript}</p>
-                  </div>
+                <div className="flex gap-3 w-full">
+                  <Button variant="ghost" onClick={() => router.push("/games")} fullWidth>
+                    Exit
+                  </Button>
+                  <Button onClick={start} fullWidth>
+                    Play Again
+                  </Button>
                 </div>
-              )}
+              </Card>
             </div>
+          )}
+        </div>
 
-            {/* Mic Controls */}
-            <div className="p-6 bg-white border-t flex flex-col items-center">
-              <MicButton 
-                isRecording={isRecording} 
-                onToggle={() => {
-                  if (isRecording) stopRecording();
-                  else startRecording();
-                }} 
-              />
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                {isRecording ? "Tap to stop & send" : "Tap to speak"}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {view === 'result' && (
-          <div className="flex-1 flex flex-col p-6 items-center justify-center">
-            <Card className="p-8 text-center flex flex-col items-center w-full">
-              <CheckCircle2 size={60} className="text-green-500 mb-4" />
-              <h2 className="text-2xl font-black mb-2">Mission Accomplished!</h2>
-              <p className="text-gray-600 mb-6">You survived the {activeMission?.location}</p>
-              <div className="text-5xl font-black text-brand-orange mb-8">+{score} XP</div>
-              
-              <Button onClick={() => setView('map')} className="w-full">
-                Back to Map
-              </Button>
-            </Card>
-          </div>
-        )}
+        {/* QUESTION MODAL */}
+        <AnimatePresence>
+          {phase === "question" && currentQ && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4"
+            >
+              <motion.div
+                initial={{ y: 60, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 60, opacity: 0 }}
+                className="bg-white rounded-card p-6 w-full max-w-md shadow-float"
+              >
+                <p className="text-[11px] font-black text-brand-purple uppercase tracking-[0.2em] mb-1 text-center">
+                  {BOARD[currentTile]?.type === "city"
+                    ? `Conquer ${BOARD[currentTile]?.name}`
+                    : "Quiz time"}
+                </p>
+                <h3 className="text-3xl font-black text-brand-dark font-hindi text-center mb-6">
+                  {currentQ.prompt}
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {currentQ.options.map((opt) => {
+                    const isAnswer = opt === currentQ.answer;
+                    const isPicked = opt === selected;
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => answer(opt)}
+                        disabled={!!selected}
+                        className={cn(
+                          "py-4 rounded-xl font-black text-[15px] border-2 transition-all active:scale-95",
+                          !selected && "bg-white border-gray-100 text-brand-dark hover:border-brand-purple/40",
+                          selected && isAnswer && "bg-green-500 border-green-500 text-white",
+                          selected && isPicked && !isAnswer && "bg-red-500 border-red-500 text-white",
+                          selected && !isPicked && !isAnswer && "opacity-50 border-gray-100 text-brand-dark"
+                        )}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </PageTransition>
   );

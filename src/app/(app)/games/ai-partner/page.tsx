@@ -1,236 +1,208 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageTransition from "@/components/ui/PageTransition";
-import { ArrowLeft, Film, Trophy, Sun, Phone, PhoneOff, MicOff, Mic } from "lucide-react";
-import { useSpeech } from "@/hooks/useSpeech";
-
+import { ArrowLeft, Trophy, Repeat } from "lucide-react";
 import { useGamification } from "@/context/GamificationContext";
+import { VOCAB, shuffle } from "@/lib/games/quizBank";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
-const TOPICS = [
-  { id: 1, title: "Bollywood Movies", icon: Film, color: "bg-purple-500" },
-  { id: 2, title: "Cricket Match", icon: Trophy, color: "bg-blue-500" },
-  { id: 3, title: "My Daily Routine", icon: Sun, color: "bg-orange-500" },
-];
+// ─────────────────────────────────────────────────────────────
+// WORD MATCH
+// Flip cards and match each Hindi word with its English meaning.
+// A memory game that quietly drills vocabulary.
+// ─────────────────────────────────────────────────────────────
+const PAIRS = 6;
 
-export default function AIPartnerGame() {
+type MCard = { key: string; pairId: number; label: string; lang: "hi" | "en" };
+type Phase = "intro" | "playing" | "win";
+
+function buildDeck(): MCard[] {
+  const chosen = shuffle(VOCAB).slice(0, PAIRS);
+  return shuffle(
+    chosen.flatMap((p, idx) => [
+      { key: `h${idx}`, pairId: idx, label: p.hi, lang: "hi" as const },
+      { key: `e${idx}`, pairId: idx, label: p.en, lang: "en" as const },
+    ])
+  );
+}
+
+export default function WordMatchGame() {
   const router = useRouter();
-  const { isRecording, transcript, startRecording, stopRecording, setTranscript } = useSpeech();
   const { awardXP } = useGamification();
-  
-  const [view, setView] = useState<'topics' | 'calling' | 'active' | 'report'>('topics');
-  const [selectedTopic, setSelectedTopic] = useState<typeof TOPICS[0] | null>(null);
-  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
 
-  // Call timer
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [cards, setCards] = useState<MCard[]>([]);
+  const [flipped, setFlipped] = useState<string[]>([]);
+  const [matched, setMatched] = useState<Set<number>>(new Set());
+  const [moves, setMoves] = useState(0);
+
+  const lockedRef = useRef(false);
+  const awardedRef = useRef(false);
+
+  const start = () => {
+    setCards(buildDeck());
+    setFlipped([]);
+    setMatched(new Set());
+    setMoves(0);
+    lockedRef.current = false;
+    awardedRef.current = false;
+    setPhase("playing");
+  };
+
+  const handleFlip = (card: MCard) => {
+    if (
+      lockedRef.current ||
+      flipped.includes(card.key) ||
+      matched.has(card.pairId) ||
+      flipped.length >= 2
+    )
+      return;
+
+    const nf = [...flipped, card.key];
+    setFlipped(nf);
+
+    if (nf.length === 2) {
+      setMoves((m) => m + 1);
+      lockedRef.current = true;
+      const a = cards.find((c) => c.key === nf[0])!;
+      const b = cards.find((c) => c.key === nf[1])!;
+      if (a.pairId === b.pairId) {
+        const willWin = matched.size + 1 === PAIRS;
+        setTimeout(() => {
+          setMatched((prev) => new Set(prev).add(a.pairId));
+          setFlipped([]);
+          lockedRef.current = false;
+          if (willWin) setPhase("win");
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setFlipped([]);
+          lockedRef.current = false;
+        }, 950);
+      }
+    }
+  };
+
+  const score = PAIRS * 20 + Math.max(0, 2 * PAIRS - moves) * 10;
+
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (view === 'active') {
-      timer = setInterval(() => setCallDuration(d => d + 1), 1000);
+    if (phase === "win" && !awardedRef.current) {
+      awardedRef.current = true;
+      awardXP(score, "Word Match!");
     }
-    return () => clearInterval(timer);
-  }, [view]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
-  // Handle user speech stopping -> trigger AI response
-  useEffect(() => {
-    if (view === 'active' && !isRecording && transcript.length > 5) {
-      setIsAiSpeaking(true);
-      // Mock AI thinking/speaking time
-      setTimeout(() => {
-        setIsAiSpeaking(false);
-        setTranscript("");
-      }, 3000);
-    }
-  }, [isRecording, transcript, view, setTranscript]);
-
-  const handleStartCall = (topic: typeof TOPICS[0]) => {
-    setSelectedTopic(topic);
-    setView('calling');
-    setTimeout(() => {
-      setView('active');
-      setIsAiSpeaking(true);
-      setTimeout(() => {
-        setIsAiSpeaking(false);
-      }, 2000);
-    }, 2000);
-  };
-
-  const handleEndCall = () => {
-    if (isRecording) stopRecording();
-    setView('report');
-    awardXP(Math.max(10, callDuration * 2), "Great Conversation!");
-  };
-
-  const toggleMute = () => {
-    if (isMuted) {
-      setIsMuted(false);
-      startRecording();
-    } else {
-      setIsMuted(true);
-      stopRecording();
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  const isUp = (card: MCard) => flipped.includes(card.key) || matched.has(card.pairId);
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex flex-col max-w-md mx-auto bg-gray-900 text-white">
-        {view === 'topics' && (
-          <div className="flex-1 bg-gray-50 text-brand-black flex flex-col">
-            <header className="p-4 flex items-center bg-white shadow-sm sticky top-0">
-              <button onClick={() => router.push('/games')} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
-                <ArrowLeft size={24} className="text-gray-700" />
-              </button>
-              <h1 className="font-bold text-lg ml-2">Choose Topic</h1>
-            </header>
-
-            <div className="flex-1 p-6 space-y-4">
-              {TOPICS.map(topic => (
-                <button
-                  key={topic.id}
-                  onClick={() => handleStartCall(topic)}
-                  className="w-full bg-white rounded-2xl p-6 shadow-sm border flex items-center gap-4 hover:scale-[1.02] transition-transform active:scale-95"
-                >
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-md ${topic.color}`}>
-                    <topic.icon size={28} />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-bold text-lg">{topic.title}</h3>
-                    <p className="text-sm text-gray-500">Tap to call AI</p>
-                  </div>
-                  <div className="ml-auto">
-                    <Phone className="text-green-500" size={24} />
-                  </div>
-                </button>
-              ))}
+      <div className="min-h-screen bg-surface flex flex-col max-w-md mx-auto">
+        <header className="px-4 py-3 flex items-center justify-between bg-white shadow-sm z-10 sticky top-0">
+          <button
+            onClick={() => router.push("/games")}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 active:scale-90 transition-transform"
+          >
+            <ArrowLeft size={24} className="text-brand-dark" />
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-brand-dark/60 font-black">
+              <Repeat size={16} /> {moves}
+            </div>
+            <div className="flex items-center gap-1.5 text-brand-dark font-black">
+              ✅ {matched.size}/{PAIRS}
             </div>
           </div>
-        )}
+        </header>
 
-        {view === 'calling' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-gray-800 to-black">
-            <div className="w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center mb-8 animate-pulse relative">
-              <div className="absolute inset-0 border-4 border-white/20 rounded-full animate-ping" />
-              {selectedTopic && (() => {
-                const IconComponent = selectedTopic.icon;
-                return <IconComponent size={50} className="text-white opacity-50" />;
-              })()}
-            </div>
-            <h2 className="text-3xl font-light mb-2">Connecting...</h2>
-            <p className="text-gray-400">AI Partner</p>
-          </div>
-        )}
-
-        {view === 'active' && (
-          <div className="flex-1 flex flex-col p-6 bg-gradient-to-b from-gray-800 to-black relative overflow-hidden">
-            {/* Visualizer Background */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-              <div className={`w-64 h-64 rounded-full bg-blue-500 blur-[100px] transition-all duration-1000 ${isAiSpeaking ? 'scale-150 opacity-30' : (isRecording ? 'bg-orange-500 scale-110 opacity-20' : '')}`} />
-            </div>
-
-            <div className="flex justify-between items-center z-10">
-               <div className="w-10" />
-               <div className="text-center">
-                 <h2 className="text-xl font-medium">{selectedTopic?.title}</h2>
-                 <p className="text-gray-400 text-sm font-mono">{formatTime(callDuration)}</p>
-               </div>
-               <div className="w-10 flex justify-end">
-                 <div className={`w-3 h-3 rounded-full ${isAiSpeaking ? 'bg-blue-500 animate-pulse' : 'bg-gray-500'}`} />
-               </div>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center z-10">
-               <div className="h-32 flex items-center justify-center w-full mb-8">
-                 {isAiSpeaking ? (
-                   <div className="flex items-center gap-1 h-16">
-                     {[1, 2, 3, 4, 5, 6].map(i => (
-                       <div key={i} className="w-3 bg-blue-400 rounded-full animate-pulse" style={{ 
-                         height: `${Math.random() * 100 + 20}%`,
-                         animationDelay: `${i * 100}ms`,
-                         animationDuration: '0.8s'
-                       }} />
-                     ))}
-                   </div>
-                 ) : (
-                   <div className="flex items-center gap-1 h-16 opacity-50">
-                     <div className="w-3 h-2 bg-gray-500 rounded-full" />
-                     <div className="w-3 h-2 bg-gray-500 rounded-full" />
-                     <div className="w-3 h-2 bg-gray-500 rounded-full" />
-                   </div>
-                 )}
-               </div>
-
-               <div className="h-24 w-full px-4 text-center">
-                 {transcript && !isAiSpeaking && (
-                   <p className="text-lg text-white/90 animate-in fade-in slide-in-from-bottom-2">
-                     "{transcript}"
-                   </p>
-                 )}
-                 {isAiSpeaking && (
-                   <p className="text-lg text-blue-300 animate-pulse">
-                     AI is speaking...
-                   </p>
-                 )}
-               </div>
-            </div>
-
-            <div className="pb-10 pt-4 flex justify-center gap-8 z-10">
-              <button 
-                onClick={toggleMute}
-                className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isMuted ? 'bg-white text-black' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
-              >
-                {isMuted ? <MicOff size={28} /> : <Mic size={28} />}
-              </button>
-
-              <button 
-                onClick={handleEndCall}
-                className="w-16 h-16 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-transform active:scale-95 shadow-[0_0_20px_rgba(239,68,68,0.5)]"
-              >
-                <PhoneOff size={28} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {view === 'report' && (
-          <div className="flex-1 bg-gray-50 text-brand-black flex flex-col p-6 items-center justify-center">
-            <Card className="p-8 w-full max-w-sm flex flex-col items-center">
-              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mb-6">
-                <Phone className="text-purple-500" size={40} />
-              </div>
-              <h2 className="text-2xl font-black mb-2">Call Ended</h2>
-              <p className="text-gray-500 mb-6">Duration: {formatTime(callDuration)}</p>
-
-              <div className="w-full bg-gray-100 rounded-xl p-4 mb-8 text-left">
-                <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wider mb-2">Feedback</h3>
-                <p className="text-gray-800 text-sm leading-relaxed">
-                  Great job keeping the conversation going! You used the word "fantastic" correctly.
-                  <br/><br/>
-                  <span className="text-brand-orange font-medium">Tip:</span> Try to say "I went" instead of "I goed".
+        <div className="flex-1 flex flex-col p-6">
+          {phase === "intro" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <div className="w-20 h-20 bg-gradient-to-br from-brand-purple to-[#8B7FFF] rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-purple-200 text-4xl rotate-3">
+                  🧠
+                </div>
+                <h2 className="text-3xl font-black text-brand-dark mb-2">Word Match</h2>
+                <p className="text-muted font-bold mb-8 leading-relaxed">
+                  Flip the cards and match each Hindi word with its English
+                  meaning. Fewer moves = more XP! 🃏
                 </p>
-              </div>
+                <Button onClick={start} fullWidth size="lg" className="text-lg h-14">
+                  Start Matching
+                </Button>
+              </Card>
+            </div>
+          )}
 
-              <div className="text-center mb-8">
-                <div className="text-sm font-bold text-gray-400 uppercase">XP Earned</div>
-                <div className="text-4xl font-black text-purple-500">+{Math.max(10, callDuration * 2)} XP</div>
-              </div>
+          {phase === "playing" && (
+            <div className="grid grid-cols-3 gap-3 mt-2">
+              {cards.map((card) => {
+                const up = isUp(card);
+                const done = matched.has(card.pairId);
+                return (
+                  <motion.button
+                    key={card.key}
+                    onClick={() => handleFlip(card)}
+                    whileTap={{ scale: 0.94 }}
+                    animate={{ rotateY: up ? 0 : 0, scale: done ? 0.96 : 1 }}
+                    className={cn(
+                      "aspect-square rounded-2xl flex items-center justify-center p-1.5 text-center font-black border-2 transition-colors",
+                      !up && "bg-brand-purple/10 border-brand-purple/20 text-brand-purple/40 text-2xl",
+                      up && !done && "bg-white border-brand-orange shadow-card",
+                      done && "bg-green-50 border-green-400"
+                    )}
+                  >
+                    {up ? (
+                      <span
+                        className={cn(
+                          "leading-tight",
+                          card.lang === "hi" ? "font-hindi text-lg text-brand-dark" : "text-sm text-brand-dark"
+                        )}
+                      >
+                        {card.label}
+                      </span>
+                    ) : (
+                      "?"
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
 
-              <Button onClick={() => setView('topics')} className="w-full h-14 text-lg">
-                Done
-              </Button>
-            </Card>
-          </div>
-        )}
+          {phase === "win" && (
+            <div className="flex-1 flex items-center justify-center">
+              <Card padding="lg" className="text-center flex flex-col items-center w-full">
+                <motion.div
+                  initial={{ scale: 0, rotate: -30 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-200"
+                >
+                  <Trophy size={42} className="text-white fill-white/30" />
+                </motion.div>
+                <h2 className="text-2xl font-black text-brand-dark mb-1">All Matched!</h2>
+                <p className="text-muted font-bold mb-6">Solved in {moves} moves</p>
+                <div className="text-5xl font-black text-brand-purple mb-8">
+                  +{score} <span className="text-2xl">XP</span>
+                </div>
+                <div className="flex gap-3 w-full">
+                  <Button variant="ghost" onClick={() => router.push("/games")} fullWidth>
+                    Exit
+                  </Button>
+                  <Button onClick={start} fullWidth>
+                    Play Again
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </PageTransition>
   );

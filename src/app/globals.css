@@ -3,10 +3,18 @@
 
 @theme {
   --color-brand-orange: #FF6B35;
+  --color-brand-orange-light: #FF8C61; /* gradient end used across cards */
   --color-brand-purple: #6C63FF;
   --color-brand-dark: #1A1A2E;
   --color-surface: #FDF6F0;
   --color-muted: #9B9BAE;
+  --color-border: #F5EDE8; /* warm cream border on cards/headers */
+
+  /* Quick Practice / home tile fills */
+  --color-tile-speak: #E8F8EE;
+  --color-tile-listen: #F0EBFF;
+  --color-tile-challenge: #FFF1E8;
+  --color-tile-progress: #E8F1FF;
 
   --radius-card: 24px; /* Restored to original premium rounding */
   --radius-btn: 16px;  /* Restored to original premium rounding */
@@ -51,6 +59,17 @@
     font-family: var(--font-hindi);
   }
 
+  /* Hide scrollbar for horizontal scrollers (games row, etc.) */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
   .card {
     @apply bg-white rounded-card shadow-card p-5; /* Restored premium padding */
   }
@@ -66,4 +85,112 @@
   .badge {
     @apply rounded-pill text-[11px] px-3 py-1 font-black uppercase tracking-tight;
   }
+
+  /* Staggered entrance for stacked sections (home, etc.) */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-rise {
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Gentle flame flicker for the streak hero */
+  @keyframes flame {
+    0%, 100% { transform: scale(1) rotate(-2deg); }
+    50%      { transform: scale(1.12) rotate(2deg); }
+  }
+  .animate-flame {
+    animation: flame 1.8s ease-in-out infinite;
+  }
+}
+
+/* ============================================================
+   DARK MODE
+   Toggled by adding `.dark` to <html> (see profile toggle +
+   no-flash script in root layout). We override Tailwind v4
+   color *variables* under .dark so utilities adapt app-wide,
+   plus a few class-scoped fixes for dual-use / literal colors.
+   ============================================================ */
+.dark {
+  color-scheme: dark;
+
+  /* Core semantic tokens */
+  --color-surface: #12121A;
+  --color-muted: #9A9AAE;
+  --color-border: #2A2A38;
+
+  /* Home tile fills → dark tints */
+  --color-tile-speak: #142A1E;
+  --color-tile-listen: #1E1A2E;
+  --color-tile-challenge: #2A1D14;
+  --color-tile-progress: #14202E;
+
+  /* Pastel tile fills (bg-*-50) → subtle dark tints */
+  --color-orange-50: #2A1D14;
+  --color-amber-50: #2A2210;
+  --color-yellow-50: #2A2410;
+  --color-blue-50: #14202E;
+  --color-rose-50: #2A1620;
+  --color-red-50: #2A1518;
+  --color-purple-50: #1E1A2E;
+  --color-violet-50: #1E1A2E;
+  --color-green-50: #142A1E;
+  --color-emerald-50: #122A22;
+  --color-gray-50: #1C1C26;
+
+  /* Borders / dividers (bg/border-*-100) → dark tints */
+  --color-gray-100: #2A2A38;
+  --color-orange-100: #3A2A1E;
+  --color-blue-100: #1E2E40;
+  --color-rose-100: #3A2230;
+  --color-purple-100: #2C2742;
+  --color-green-100: #1E3A2C;
+}
+
+/* App background + base text */
+.dark body {
+  background-color: #12121A;
+  color: #ECECF4;
+}
+
+/* Cards / white surfaces → dark elevated */
+.dark .bg-white {
+  background-color: #1C1C26 !important;
+}
+/* Near-opaque white surfaces (e.g. bottom nav) */
+.dark .bg-white\/95 {
+  background-color: rgba(28, 28, 38, 0.95) !important;
+}
+
+/* Foreground text token used everywhere (incl. /opacity variants) */
+.dark .text-brand-dark,
+.dark .text-brand-dark\/60,
+.dark .text-brand-dark\/40,
+.dark .text-brand-dark\/30,
+.dark .text-brand-dark\/20 {
+  color: #ECECF4 !important;
+}
+
+/* Cream borders used across cards */
+.dark .border-\[\#F5EDE8\] {
+  border-color: #2A2A38 !important;
+}
+
+/* Dual-use brand-dark buttons (have white text) → accent so text stays readable */
+.dark .bg-brand-dark {
+  background-color: var(--color-brand-purple) !important;
+}
+
+/* Literal pastel hexes used in home tiles */
+.dark .bg-\[\#E8F8EE\] { background-color: #142A1E !important; } /* Speak  */
+.dark .bg-\[\#F0EBFF\] { background-color: #1E1A2E !important; } /* Listen */
+.dark .bg-\[\#FFF1E8\] { background-color: #2A1D14 !important; } /* Challenge */
+.dark .bg-\[\#E8F1FF\] { background-color: #14202E !important; } /* Progress */
+.dark .bg-\[\#FFF0EB\] { background-color: #2A1D14 !important; } /* soft / step circle */
+
+/* Smooth the transition when toggling */
+html.dark,
+html.dark body {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

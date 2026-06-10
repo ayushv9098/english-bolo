@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import NativeAppInit from "@/components/native/NativeAppInit";
+import OfflineNotice from "@/components/native/OfflineNotice";
 
 const baloo2 = Baloo_2({ 
   subsets: ["latin"], 
@@ -26,6 +29,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // Let CSS env(safe-area-inset-*) work on notched devices inside the app.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -34,8 +39,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Apply saved theme before paint to avoid a flash of the wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className={`${baloo2.variable} ${notoDevanagari.variable} font-sans`}>
+        <ServiceWorkerRegister />
+        <NativeAppInit />
+        <OfflineNotice />
         {children}
       </body>
     </html>
