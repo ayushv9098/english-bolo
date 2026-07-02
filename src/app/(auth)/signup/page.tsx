@@ -24,6 +24,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
   
   // Validation states
   const [passwordValidations, setPasswordValidations] = useState({
@@ -49,6 +50,7 @@ export default function SignupPage() {
     }
 
     setLoading(true);
+    setFormError("");
     
     try {
       const signupData: any = {
@@ -80,7 +82,7 @@ export default function SignupPage() {
         }
       }
     } catch (err: any) {
-      handleAuthError(err);
+      handleAuthError(err, setFormError);
     } finally {
       setLoading(false);
     }
@@ -196,6 +198,12 @@ export default function SignupPage() {
               </button>
             </div>
           </div>
+
+          {formError && (
+            <p className="text-[13px] text-red-500 font-semibold text-center bg-red-50 p-2 rounded-md border border-red-100">
+              {formError}
+            </p>
+          )}
 
           <Button 
             type="submit" 

@@ -28,10 +28,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [formError, setFormError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setFormError("");
 
     try {
       const credentials: any = { password };
@@ -62,7 +64,7 @@ export default function LoginPage() {
         }
       }
     } catch (err: any) {
-      handleAuthError(err);
+      handleAuthError(err, setFormError);
     } finally {
       setLoading(false);
     }
@@ -71,6 +73,7 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     if (googleLoading) return;
     setGoogleLoading(true);
+    setFormError("");
     const loadingToast = toast.loading("Connecting to Google...");
     
     try {
@@ -83,7 +86,7 @@ export default function LoginPage() {
       if (error) throw error;
     } catch (err: any) {
       toast.dismiss(loadingToast);
-      handleAuthError(err);
+      handleAuthError(err, setFormError);
       setGoogleLoading(false);
     }
   };
@@ -188,6 +191,12 @@ export default function LoginPage() {
               />
               <label htmlFor="remember" className="text-sm text-muted cursor-pointer">Remember me</label>
             </div>
+
+            {formError && (
+              <p className="text-[13px] text-red-500 font-semibold text-center bg-red-50 p-2 rounded-md border border-red-100">
+                {formError}
+              </p>
+            )}
 
             <Button
               type="submit"

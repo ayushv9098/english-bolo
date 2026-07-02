@@ -38,6 +38,9 @@ export const parseAuthError = (error: any): string => {
   if (msg.includes("user not found")) {
     return "User account not found. Please register first.";
   }
+  if (msg.includes("already registered") || msg.includes("already exists")) {
+    return "This account already exists. Please log in instead.";
+  }
   if (msg.includes("session expired")) {
     return "Your session has expired. Please sign in again.";
   }
