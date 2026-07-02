@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,7 +10,16 @@ interface HomeGamesRowProps {
 }
 
 export function HomeGamesRow({ playedToday }: HomeGamesRowProps) {
-  const games = [
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    // 110px card width + 14px gap = 124px
+    const index = Math.round(e.currentTarget.scrollLeft / 124);
+    setActiveIndex(index);
+  };
+
+  const baseGames = [
     {
       name: "Speed Speak",
       emoji: "⚡",
@@ -48,6 +59,9 @@ export function HomeGamesRow({ playedToday }: HomeGamesRowProps) {
     },
   ];
 
+  // Repeat the games array to create an "infinite" feel when manually scrolling
+  const games = Array(15).fill(baseGames).flat();
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -60,15 +74,22 @@ export function HomeGamesRow({ playedToday }: HomeGamesRowProps) {
         </Link>
       </div>
 
-      <div className="flex gap-3.5 overflow-x-auto pb-1 no-scrollbar -mx-5 px-5">
+      <div 
+        ref={scrollRef}
+        className="flex gap-3.5 overflow-x-auto pb-4 overflow-y-hidden -mx-5 px-[calc(50%-55px)] snap-x snap-mandatory [&::-webkit-scrollbar]:hidden" 
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        onScroll={handleScroll}
+      >
         {games.map((game, i) => (
-          <Link key={i} href={game.href} className="shrink-0 group">
+          <Link key={i} href={game.href} className="shrink-0 snap-center group">
             <div
               className={cn(
-                "w-[108px] rounded-[24px] p-4 text-center border-[1.5px] relative active:scale-95 transition-all duration-300",
+                "w-[110px] h-[145px] flex flex-col justify-between items-center rounded-[24px] p-3 text-center border-[1.5px] relative transition-all duration-300 ease-out",
                 game.theme,
                 game.accent,
-                "shadow-card hover:-translate-y-1"
+                activeIndex === i 
+                  ? "scale-100 opacity-100 shadow-card" 
+                  : "scale-[0.85] opacity-50 shadow-none"
               )}
             >
               {/* Status Dot */}
