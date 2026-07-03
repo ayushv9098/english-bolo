@@ -28,7 +28,8 @@ import {
   Store,
   Wallet,
   Crown,
-  Sparkles
+  Sparkles,
+  Share2
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -73,7 +74,7 @@ const ACHIEVEMENTS = [
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
-  const { totalXP, rank, currentStreak, maxStreak, unopenedLootBoxes, openLootBox } = useGamification();
+  const { totalXP, rank, currentStreak, maxStreak, unopenedLootBoxes, openLootBox, awardXP } = useGamification();
   
   const [profile, setProfile] = useState<any>(null);
   const [showSecurityView, setShowSecurityView] = useState(false);
@@ -232,6 +233,20 @@ export default function ProfilePage() {
       toast.success("Reminders off", { icon: "🔕" });
     } else {
       toast.error(res.error || "Reminders off nahi hue");
+    }
+  };
+
+  const handleShareApp = () => {
+    const text = "Main AngreziBolo app par free mein English sikh raha hu! Aap bhi try karein: https://angrezibolo.vercel.app";
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+
+    const today = new Date().toDateString();
+    const lastShared = localStorage.getItem('last_shared_date');
+    if (lastShared !== today) {
+      localStorage.setItem('last_shared_date', today);
+      setTimeout(() => {
+        awardXP(100, "App Shared!");
+      }, 1000);
     }
   };
 
@@ -639,6 +654,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-2 px-1"><span className="w-1 h-3.5 rounded-full bg-gradient-to-b from-brand-orange to-brand-purple" /><h3 className="text-[10px] font-black text-brand-dark/30 uppercase tracking-[0.15em]">Account & Settings</h3></div>
         <div className="flex flex-col gap-2">
           <Link href="/progress"><Card className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center group-active:scale-90 transition-transform"><BarChart2 size={18} className="text-brand-orange" /></div><span className="text-[14px] font-bold text-brand-dark">My Activity</span></div><ChevronRight size={16} className="text-brand-dark/20" /></Card></Link>
+          <Card onClick={handleShareApp} className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center group-active:scale-90 transition-transform"><Share2 size={18} className="text-green-500 group-hover:text-green-600 transition-colors" /></div><span className="text-[14px] font-bold text-brand-dark">Invite Friends</span></div><span className="text-[9px] font-black px-2 py-1 rounded-md text-green-600 bg-green-50 uppercase tracking-wider">WhatsApp</span></Card>
           <Card onClick={() => setShowRemindersModal(true)} className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center group-active:scale-90 transition-transform"><Bell size={18} className={remindersEnabled ? "text-brand-purple" : "text-brand-dark/20"} /></div><span className="text-[14px] font-bold text-brand-dark">Reminders</span></div><span className={`text-[9px] font-black px-2 py-1 rounded-md transition-colors uppercase tracking-wider ${remindersEnabled ? 'text-brand-purple bg-brand-purple/10' : 'text-brand-dark/30 bg-brand-dark/5'}`}>{remindersEnabled ? formatReminderTime(reminderTime) : 'Off'}</span></Card>
           <Card onClick={toggleDarkMode} className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-2xl bg-brand-dark/5 flex items-center justify-center group-active:scale-90 transition-transform"><Moon size={20} className={darkMode ? "text-brand-purple" : "text-brand-dark/30"} /></div><span className="text-[15px] font-bold text-brand-dark">Dark Mode</span></div><div className={`w-10 h-5 rounded-full relative transition-colors ${darkMode ? 'bg-brand-purple' : 'bg-brand-dark/10'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${darkMode ? 'left-5.5' : 'left-0.5'}`}></div></div></Card>
           <Card onClick={() => setShowSecurityView(true)} className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center group-active:scale-90 transition-transform"><Shield size={18} className="text-slate-400 group-hover:text-brand-purple transition-colors" /></div><span className="text-[14px] font-bold text-brand-dark">Privacy & Security</span></div><ChevronRight size={16} className="text-brand-dark/20" /></Card>

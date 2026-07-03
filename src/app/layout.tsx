@@ -18,8 +18,16 @@ const notoDevanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
-  title: "AngreziBolo",
-  description: "Learn English with an Indian touch",
+  title: "AngreziBolo | Learn English Easily",
+  description: "Learn English with an Indian touch. Improve your speaking, listening, and grammar through interactive daily lessons.",
+  keywords: ["learn English online", "English speaking app", "Angrezi bolo", "free English lessons", "improve English communication"],
+  openGraph: {
+    title: "AngreziBolo | Learn English Easily",
+    description: "Learn English with an Indian touch. Improve your speaking, listening, and grammar through interactive daily lessons.",
+    siteName: "AngreziBolo",
+    locale: "en_IN",
+    type: "website",
+  },
   manifest: "/manifest.json",
 };
 
