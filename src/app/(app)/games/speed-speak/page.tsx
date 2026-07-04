@@ -41,7 +41,7 @@ type GameState = "intro" | "countdown" | "playing" | "feedback" | "gameover";
 
 export default function WordRushGame() {
   const router = useRouter();
-  const { awardXP } = useGamification();
+  const { awardGameXP } = useGamification();
 
   const [gameState, setGameState] = useState<GameState>("intro");
   const [session, setSession] = useState<Sentence[]>([]);
@@ -189,7 +189,7 @@ export default function WordRushGame() {
   // Award XP once the game is over
   useEffect(() => {
     if (gameState === "gameover" && score > 0) {
-      awardXP(score, "Word Rush Complete!");
+      awardGameXP(score, "speed_speak", "Word Rush Complete!");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState]);

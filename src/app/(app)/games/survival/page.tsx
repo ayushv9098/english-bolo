@@ -24,7 +24,7 @@ type Phase = "intro" | "playing" | "gameover";
 
 export default function SurvivalGame() {
   const router = useRouter();
-  const { awardXP } = useGamification();
+  const { awardGameXP } = useGamification();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [q, setQ] = useState<MCQ | null>(null);
@@ -120,7 +120,7 @@ export default function SurvivalGame() {
     if (phase === "gameover" && !awardedRef.current) {
       awardedRef.current = true;
       stopTimer();
-      if (score > 0) awardXP(score, "Survival Quiz!");
+      if (score > 0) awardGameXP(score, "survival", "Survival Quiz!");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

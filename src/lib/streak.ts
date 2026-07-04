@@ -8,10 +8,28 @@ export async function updateUserStreakAndXP(supabase: SupabaseClient, userId: st
     .eq('user_id', userId)
     .maybeSingle();
 
+  let current_streak = stats?.current_streak;
+  let last_login = stats?.last_login;
+  let total_xp = stats?.total_xp;
+
+  if (!stats) {
+    const { data: userStats } = await supabase
+      .from('users')
+      .select('streak, last_active, xp_points')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (userStats) {
+      current_streak = userStats.streak;
+      last_login = userStats.last_active;
+      total_xp = userStats.xp_points;
+    }
+  }
+
   const now = new Date();
-  const lastActive = stats?.last_login ? new Date(stats.last_login) : null;
+  const lastActive = last_login ? new Date(last_login) : null;
   
-  let newStreak = stats?.current_streak || 0;
+  let newStreak = current_streak || 0;
   let hasDoneLessonToday = false;
   
   if (lastActive) {
@@ -32,18 +50,18 @@ export async function updateUserStreakAndXP(supabase: SupabaseClient, userId: st
     newStreak = 1;
   }
 
-  const newXp = (stats?.total_xp || 0) + xpGained;
+  const newXp = (total_xp || 0) + xpGained;
 
   // Update BOTH tables to prevent synchronization issues
   await Promise.all([
     supabase
       .from('user_stats')
-      .update({
+      .upsert({
+        user_id: userId,
         current_streak: newStreak,
         last_login: now.toISOString(),
         total_xp: newXp
-      })
-      .eq('user_id', userId),
+      }, { onConflict: 'user_id' }),
     supabase
       .from('users')
       .update({

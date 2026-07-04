@@ -46,7 +46,7 @@ type Phase = "intro" | "playing" | "question" | "gameover";
 
 export default function MonopolyGame() {
   const router = useRouter();
-  const { awardXP } = useGamification();
+  const { awardGameXP } = useGamification();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [pos, setPos] = useState(0);
@@ -186,7 +186,7 @@ export default function MonopolyGame() {
   useEffect(() => {
     if (phase === "gameover" && !awardedRef.current) {
       awardedRef.current = true;
-      awardXP(finalScore, "Monopoly Empire!");
+      awardGameXP(finalScore, "real_life", "Real Life Mission!");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

@@ -217,6 +217,20 @@ export default function LessonPage() {
     router.push("/lessons");
   };
 
+  const currentPhrase = phrases[currentPhraseIdx];
+  const quizOptions = React.useMemo(() => {
+    const correct = currentPhrase?.hindi;
+    if (!correct) return [];
+    let others = phrases.filter((_, idx) => idx !== currentPhraseIdx).map(p => p.hindi);
+    const fallbacks = ["Main ghar ja raha hoon", "Dost banao", "Kahan ho tum?", "Mujhe bhook lagi hai", "Yeh bahut mehenga hai", "Kal milte hain"];
+    while (others.length < 2) {
+      const f = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+      if (!others.includes(f) && f !== correct) others.push(f);
+    }
+    const shuffledOthers = [...others].sort(() => 0.5 - Math.random());
+    return [correct, ...shuffledOthers.slice(0, 2)].sort(() => 0.5 - Math.random());
+  }, [currentPhraseIdx, phrases, currentPhrase]);
+
   if (loading) {
     return (
       <PageTransition className="flex flex-col min-h-screen bg-surface px-4 pt-4">
@@ -243,23 +257,22 @@ export default function LessonPage() {
 
   if (!lesson || phrases.length === 0) return <div className="min-h-screen bg-surface flex items-center justify-center font-bold text-muted">Content loading...</div>;
 
-  const currentPhrase = phrases[currentPhraseIdx];
   const progressPercent = (step / totalSteps) * 100;
   const charA = "Sam";
   const charB = "Rohan";
 
   return (
-    <PageTransition className="flex flex-col min-h-screen bg-surface selection:bg-brand-orange/20 pb-16 font-sans">
-      <div className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md px-4 pt-4 pb-1 border-b border-white/50">
+    <PageTransition className="flex flex-col h-screen overflow-hidden bg-surface selection:bg-brand-orange/20 font-sans">
+      <div className="flex-none z-20 bg-surface/90 backdrop-blur-md px-4 pt-4 pb-2 border-b border-white/50">
         <div className="max-w-md md:max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-2.5">
             <button onClick={() => router.back()} className="p-1 hover:bg-black/5 rounded-full transition-colors active:scale-90">
               <ArrowLeft className="w-4 h-4 text-brand-dark" strokeWidth={3} />
             </button>
             <div className="flex-1 px-4 overflow-hidden text-center">
-               <h2 className="text-[9px] font-black text-brand-dark truncate uppercase tracking-widest opacity-25">{lesson.title}</h2>
+               <h2 className="text-[10px] font-black text-brand-dark truncate uppercase tracking-widest opacity-40">{lesson.title}</h2>
             </div>
-            <span className="text-[9px] font-black text-brand-orange bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-md shadow-sm shrink-0">
+            <span className="text-[10px] font-black text-brand-orange bg-orange-50 border border-orange-100 px-2.5 py-0.5 rounded-md shadow-sm shrink-0">
               {step}/{totalSteps}
             </span>
           </div>
@@ -267,7 +280,8 @@ export default function LessonPage() {
         </div>
       </div>
 
-      <main className="flex-1 max-w-md md:max-w-2xl mx-auto w-full p-4 flex flex-col pb-24">
+      <main className="flex-1 overflow-y-auto w-full relative">
+        <div className="max-w-md md:max-w-2xl mx-auto w-full p-4 flex flex-col pb-32 min-h-full">
         {step === 1 && (
           <div className="flex flex-col gap-5 animate-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col items-center text-center gap-1.5">
@@ -281,7 +295,11 @@ export default function LessonPage() {
                <div className="h-[1px] bg-gray-100 w-10 mx-auto my-4" />
                <p className="hindi text-muted font-bold text-sm relative z-10 opacity-70">{lesson.hindi_description}</p>
             </Card>
-            <Button className="mt-1 h-12 rounded-xl text-sm font-black shadow-md shadow-orange-100" onClick={handleNextStep}>Ready to start! <ChevronRight size={16} className="ml-0.5" /></Button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-surface via-surface/95 to-transparent z-30 flex justify-center pointer-events-none">
+              <div className="w-full max-w-md md:max-w-2xl px-4 pointer-events-auto">
+                <Button className="w-full h-14 rounded-xl text-[15px] font-black shadow-lg shadow-brand-orange/20" onClick={handleNextStep}>Ready to start! <ChevronRight size={16} className="ml-0.5" /></Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -303,7 +321,11 @@ export default function LessonPage() {
                  </motion.div>
               ))}
             </div>
-            <Button className="mt-4 h-10 rounded-xl font-black text-[12px]" onClick={handleNextStep}>Understood <ChevronRight size={16} /></Button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-surface via-surface/95 to-transparent z-30 flex justify-center pointer-events-none">
+              <div className="w-full max-w-md md:max-w-2xl px-4 pointer-events-auto">
+                <Button className="w-full h-14 rounded-xl font-black text-[15px] shadow-lg shadow-brand-orange/20" onClick={handleNextStep}>Understood <ChevronRight size={16} className="ml-0.5" /></Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -322,7 +344,11 @@ export default function LessonPage() {
                 <button onClick={() => speakText(currentPhrase.english)} className="w-10 h-10 rounded-full bg-brand-purple text-white flex items-center justify-center mx-auto shadow-lg shadow-purple-200 active:scale-90 transition-transform"><Volume2 size={18} /></button>
               </div>
             </Card>
-            <Button className="mt-1 h-12 rounded-xl font-black text-sm shadow-md shadow-purple-50" onClick={handleNextStep}>Ready to speak <ChevronRight size={16} className="ml-0.5" /></Button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-surface via-surface/95 to-transparent z-30 flex justify-center pointer-events-none">
+              <div className="w-full max-w-md md:max-w-2xl px-4 pointer-events-auto">
+                <Button className="w-full h-14 rounded-xl font-black text-[15px] shadow-lg shadow-brand-orange/20" onClick={handleNextStep}>Ready to speak <ChevronRight size={16} className="ml-0.5" /></Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -341,7 +367,11 @@ export default function LessonPage() {
                 <button onClick={toggleRecording} className={cn("relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center shadow-md transition-all active:scale-90", recordingState === "recording" ? "bg-red-500" : recordingState === "done" ? "bg-green-500" : "bg-brand-orange")}>{recordingState === "done" ? (<RefreshCw className="w-7 h-7 text-white" />) : (<Mic className="w-8 h-8 text-white" />)}</button>
               </div>
             </div>
-            <Button className="mt-2 h-12 rounded-xl font-black text-sm" disabled={recordingState !== "done"} onClick={handleNextStep}>Take the Quiz <ChevronRight size={16} className="ml-0.5" /></Button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-surface via-surface/95 to-transparent z-30 flex justify-center pointer-events-none">
+              <div className="w-full max-w-md md:max-w-2xl px-4 pointer-events-auto">
+                <Button className="w-full h-14 rounded-xl font-black text-[15px] shadow-lg shadow-brand-orange/20" disabled={recordingState !== "done"} onClick={handleNextStep}>Take the Quiz <ChevronRight size={16} className="ml-0.5" /></Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -350,15 +380,19 @@ export default function LessonPage() {
              <div className="flex flex-col items-center text-center gap-1"><span className="text-[9px] font-black text-green-500 uppercase tracking-[0.2em]">Step 5 — Mastery Quiz</span><h3 className="text-xl font-black text-brand-dark tracking-tight leading-none">Choose the meaning</h3></div>
              <Card className="p-5 text-center border-none shadow-card bg-white"><p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] mb-1.5">Sentence</p><h3 className="text-[16px] font-black text-brand-dark">"{currentPhrase.english}"</h3></Card>
              <div className="grid gap-2">
-               {[currentPhrase.hindi, "Main ghar ja raha hoon", "Dost banao"].map((opt, i) => (
+               {quizOptions.map((opt, i) => (
                   <button key={i} onClick={() => handleQuizSubmit(opt, currentPhrase.hindi)} className={cn("w-full p-3.5 rounded-xl border-2 font-bold text-left transition-all flex items-center justify-between group", selectedOption === opt ? (isCorrect ? "bg-green-50 border-green-500 text-green-700" : "bg-red-50 border-red-500 text-red-700") : "bg-white border-[#F5EDE8] text-brand-dark hover:border-brand-orange/30")}><span className="hindi text-[15px]">{opt}</span>{selectedOption === opt && (isCorrect ? <CheckCircle2 size={16} className="text-green-500" /> : <Zap size={16} className="text-red-500" />)}</button>
                ))}
              </div>
              {isCorrect !== null && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn("p-4 rounded-xl border flex flex-col gap-1 items-center text-center", isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}>
-                  <p className={cn("font-black text-sm", isCorrect ? "text-green-700" : "text-red-700")}>{isCorrect ? "Brilliant!" : "Oops! Incorrect."}</p>
-                  <Button className={cn("mt-2 w-full h-10 rounded-lg font-black text-xs", isCorrect ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600")} onClick={handleNextStep}>{isCorrect ? "Continue →" : "Next Lesson →"}</Button>
-                </motion.div>
+                <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-surface via-surface/95 to-transparent z-30 flex justify-center pointer-events-none">
+                  <div className="w-full max-w-md md:max-w-2xl px-4 pointer-events-auto">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={cn("p-5 rounded-2xl border-2 flex flex-col gap-2 items-center text-center shadow-2xl", isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}>
+                      <p className={cn("font-black text-[16px]", isCorrect ? "text-green-700" : "text-red-700")}>{isCorrect ? "Brilliant!" : "Oops! Incorrect."}</p>
+                      <Button className={cn("w-full h-14 rounded-xl font-black text-[15px] shadow-lg", isCorrect ? "bg-green-500 hover:bg-green-600 shadow-green-200/50" : "bg-red-500 hover:bg-red-600 shadow-red-200/50")} onClick={handleNextStep}>{isCorrect ? "Continue →" : "Next Lesson →"}</Button>
+                    </motion.div>
+                  </div>
+                </div>
              )}
            </div>
         )}
@@ -370,9 +404,14 @@ export default function LessonPage() {
               <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-100"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm"><Star size={16} className="text-brand-orange fill-brand-orange" /></div><span className="font-black text-brand-dark text-[13px]">Speaking</span></div><div className="text-right"><span className="text-lg font-black text-brand-dark">{pronunciationScore}/10</span></div></div>
               <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm"><Check size={16} className="text-blue-500" strokeWidth={4} /></div><span className="font-black text-brand-dark text-[13px]">Accuracy</span></div><div className="text-right"><span className="text-lg font-black text-brand-dark">{quizScore}%</span></div></div>
             </Card>
-            <Button className="mt-4 h-14 rounded-xl text-base font-black shadow-lg shadow-orange-200 group active:scale-95" onClick={handleFinish} isLoading={loading}>Claim Your XP <Zap size={18} className="ml-1.5 fill-white animate-pulse" /></Button>
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-surface via-surface/95 to-transparent z-30 flex justify-center pointer-events-none">
+              <div className="w-full max-w-md md:max-w-2xl px-4 pointer-events-auto">
+                <Button className="w-full h-14 rounded-xl text-[16px] font-black shadow-xl shadow-brand-orange/30 group active:scale-95" onClick={handleFinish} isLoading={loading}>Claim Your XP <Zap size={18} className="ml-1.5 fill-white animate-pulse" /></Button>
+              </div>
+            </div>
           </div>
         )}
+        </div>
       </main>
       <style dangerouslySetInnerHTML={{__html: `@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } } .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }`}} />
     </PageTransition>

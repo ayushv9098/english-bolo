@@ -33,7 +33,7 @@ function buildDeck(): MCard[] {
 
 export default function WordMatchGame() {
   const router = useRouter();
-  const { awardXP } = useGamification();
+  const { awardGameXP } = useGamification();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [cards, setCards] = useState<MCard[]>([]);
@@ -93,7 +93,7 @@ export default function WordMatchGame() {
   useEffect(() => {
     if (phase === "win" && !awardedRef.current) {
       awardedRef.current = true;
-      awardXP(score, "Word Match!");
+      awardGameXP(score, "ai_partner", "Word Match!");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

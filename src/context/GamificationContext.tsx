@@ -15,6 +15,7 @@ interface GamificationState {
   unopenedLootBoxes: number;
   isLoading: boolean;
   awardXP: (amount: number, reason?: string) => void;
+  awardGameXP: (amount: number, gameType: string, reason?: string) => void;
   openLootBox: () => void;
   xpPopups: { id: number; amount: number; message?: string }[];
 }
@@ -62,6 +63,19 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
       setRank((data.rank as RankType) || 'Beginner');
       setCurrentStreak(data.current_streak || 0);
       setMaxStreak(data.max_streak || 0);
+    } else {
+      // Fallback to users table if user_stats row doesn't exist yet
+      const { data: userData } = await supabase
+        .from('users')
+        .select('xp_points, streak')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (userData) {
+        setTotalXP(userData.xp_points || 0);
+        setCurrentStreak(userData.streak || 0);
+        setRank(getRankForXP(userData.xp_points || 0));
+      }
     }
 
     const { count } = await supabase
@@ -75,7 +89,7 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   };
 
-  const getRankForXP = (xp: number): RankType => {
+  function getRankForXP(xp: number): RankType {
     let currentRank = RANKS[0].name;
     for (const r of RANKS) {
       if (xp >= r.minXP) {
@@ -83,7 +97,7 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     return currentRank as RankType;
-  };
+  }
 
   const awardXP = async (amount: number, reason?: string) => {
     // 1. Trigger Animation immediately
@@ -125,8 +139,7 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all([
       supabase
         .from('user_stats')
-        .update({ total_xp: newXP, rank: newRank })
-        .eq('user_id', user.id),
+        .upsert({ user_id: user.id, total_xp: newXP, rank: newRank }, { onConflict: 'user_id' }),
       supabase
         .from('users')
         .update({ xp_points: newXP })
@@ -167,9 +180,25 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const awardGameXP = async (amount: number, gameType: string, reason?: string) => {
+    awardXP(amount, reason);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from('game_sessions').insert({
+      user_id: user.id,
+      game_type: gameType,
+      score: amount,
+      xp_earned: amount
+    });
+    if (error) {
+      console.error("Game session error:", error);
+      toast.error("Progress not saved: " + error.message);
+    }
+  };
+
   return (
     <GamificationContext.Provider value={{
-      totalXP, rank, currentStreak, maxStreak, unopenedLootBoxes, isLoading, awardXP, openLootBox, xpPopups
+      totalXP, rank, currentStreak, maxStreak, unopenedLootBoxes, isLoading, awardXP, awardGameXP, openLootBox, xpPopups
     }}>
       {children}
     </GamificationContext.Provider>

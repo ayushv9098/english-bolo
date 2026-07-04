@@ -22,7 +22,7 @@ type Phase = "intro" | "playing" | "gameover";
 
 export default function FillTheBlankGame() {
   const router = useRouter();
-  const { awardXP } = useGamification();
+  const { awardGameXP } = useGamification();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [rounds, setRounds] = useState<FillBlank[]>([]);
@@ -76,7 +76,7 @@ export default function FillTheBlankGame() {
   useEffect(() => {
     if (phase === "gameover" && !awardedRef.current) {
       awardedRef.current = true;
-      if (score > 0) awardXP(score, "Fill the Blank!");
+      if (score > 0) awardGameXP(score, "daily_challenge", "Fill the Blank!");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

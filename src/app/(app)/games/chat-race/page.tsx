@@ -21,7 +21,7 @@ type Msg = { sender: "ai" | "user"; text: string };
 
 export default function QuickReplyGame() {
   const router = useRouter();
-  const { awardXP } = useGamification();
+  const { awardGameXP } = useGamification();
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -88,7 +88,7 @@ export default function QuickReplyGame() {
   useEffect(() => {
     if (phase === "gameover" && !awardedRef.current) {
       awardedRef.current = true;
-      if (score > 0) awardXP(score, "Quick Reply!");
+      if (score > 0) awardGameXP(score, "chat_race", "Quick Reply!");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

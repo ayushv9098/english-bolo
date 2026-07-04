@@ -71,6 +71,7 @@ export default function AvatarPage() {
 
   return (
     <PageTransition className="h-screen bg-surface flex flex-col relative overflow-hidden font-sans">
+      <div className="flex-1 overflow-y-auto pb-32">
       {/* HEADER - OPTIMIZED SPACING */}
       <header className="relative z-10 px-8 pt-10 pb-2">
         <div className="flex items-center justify-between">
@@ -121,7 +122,7 @@ export default function AvatarPage() {
       </header>
 
       {/* AVATAR GRID - MORE COMPACT */}
-      <div className="relative z-10 flex-1 px-8 pt-4 overflow-hidden">
+      <div className="relative z-10 px-8 pt-4">
         <motion.div 
           key={category}
           initial={{ opacity: 0, x: category === "boys" ? -20 : 20 }}
@@ -178,6 +179,7 @@ export default function AvatarPage() {
             );
           })}
         </motion.div>
+      </div>
       </div>
 
       {/* BOTTOM BUTTON MATCHING SCREENSHOT - ULTRA-SLEEK PROPORTIONS */}

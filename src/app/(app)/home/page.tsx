@@ -12,6 +12,9 @@ import { HomeGamesRow } from "@/components/home/HomeGamesRow";
 import DailyLessonCard from "@/components/DailyLessonCard";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function HomePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
