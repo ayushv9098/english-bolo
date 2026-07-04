@@ -62,7 +62,10 @@ export default async function HomePage() {
   const avatarId = profile?.avatar_emoji || "G01";
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  let greeting = "Good morning";
+  if (hour >= 12 && hour < 17) greeting = "Good afternoon";
+  else if (hour >= 17 && hour < 21) greeting = "Good evening";
+  else if (hour >= 21 || hour < 4) greeting = "Good night";
   const streakCount = profile?.streak || 0;
   const subline =
     streakCount > 0
@@ -80,13 +83,13 @@ export default async function HomePage() {
           <p className="text-[12px] font-semibold text-muted mt-1.5">{subline}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Link href="/notifications">
             <div className="relative group">
-              <div className="bg-white shadow-card w-[34px] h-[34px] rounded-xl flex items-center justify-center border border-border active:scale-90 transition-all">
-                <Bell size={17} className="text-brand-dark/40 group-hover:text-brand-orange transition-colors" />
+              <div className="bg-white shadow-card w-[42px] h-[42px] rounded-xl flex items-center justify-center border border-border active:scale-90 transition-all">
+                <Bell size={20} className="text-brand-dark/40 group-hover:text-brand-orange transition-colors" />
                 {notificationCount !== null && notificationCount > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-gradient-to-br from-brand-orange to-brand-orange-light text-white min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[8px] font-black border-2 border-white shadow-sm ring-2 ring-brand-orange/10">
+                  <div className="absolute -top-1.5 -right-1.5 bg-gradient-to-br from-brand-orange to-brand-orange-light text-white min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-black border-2 border-white shadow-sm ring-2 ring-brand-orange/10">
                     {notificationCount > 9 ? '9+' : notificationCount}
                   </div>
                 )}
@@ -94,8 +97,8 @@ export default async function HomePage() {
             </div>
           </Link>
 
-          <Link href="/profile">
-            <UserAvatar id={profile?.avatar_emoji || "G01"} className="w-[34px] h-[34px] rounded-xl shadow-card border-2 border-white ring-4 ring-brand-orange/5 active:scale-90 transition-all duration-300" />
+          <Link href="/profile" className="group">
+            <UserAvatar id={profile?.avatar_emoji || "G01"} className="w-[42px] h-[42px] rounded-xl shadow-card border-2 border-white ring-4 ring-brand-orange/5 active:scale-90 group-hover:scale-110 group-hover:-rotate-3 group-hover:ring-brand-orange/30 group-hover:shadow-lg transition-all duration-300 cursor-pointer" />
           </Link>
         </div>
       </header>
@@ -152,39 +155,39 @@ export default async function HomePage() {
         </div>
 
         {/* QUICK PRACTICE SECTION */}
-        <section className="flex flex-col gap-4 mb-5 animate-rise" style={{ animationDelay: "300ms" }}>
+        <section className="flex flex-col gap-4 mb-5 animate-rise w-full" style={{ animationDelay: "300ms" }}>
           <h3 className="text-[18px] font-black text-brand-dark tracking-tight">Quick Practice ⚡</h3>
-          <div className="grid grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
             <Link href="/practice/speak" className="block group">
-              <div className="bg-tile-speak rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-green-100/60">
-                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
-                  <Mic className="text-green-600 w-5 h-5" />
+              <div className="bg-tile-speak rounded-[20px] h-[100px] md:h-[120px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-1 cursor-pointer shadow-card border border-green-100/60">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <Mic className="text-green-600 w-5 h-5 md:w-6 md:h-6" />
                 </div>
-                <span className="text-green-700 font-bold text-sm">Speak</span>
+                <span className="text-green-700 font-bold text-sm md:text-base">Speak</span>
               </div>
             </Link>
             <Link href="/practice/listen" className="block group">
-              <div className="bg-tile-listen rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-purple-100/60">
-                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
-                  <Headphones className="text-brand-purple w-5 h-5" />
+              <div className="bg-tile-listen rounded-[20px] h-[100px] md:h-[120px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-1 cursor-pointer shadow-card border border-purple-100/60">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <Headphones className="text-brand-purple w-5 h-5 md:w-6 md:h-6" />
                 </div>
-                <span className="text-brand-purple font-bold text-sm">Listen</span>
+                <span className="text-brand-purple font-bold text-sm md:text-base">Listen</span>
               </div>
             </Link>
             <Link href="/games/daily-challenge" className="block group">
-              <div className="bg-tile-challenge rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-orange-100/60">
-                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
-                  <Target className="text-brand-orange w-5 h-5" />
+              <div className="bg-tile-challenge rounded-[20px] h-[100px] md:h-[120px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-1 cursor-pointer shadow-card border border-orange-100/60">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <Target className="text-brand-orange w-5 h-5 md:w-6 md:h-6" />
                 </div>
-                <span className="text-brand-orange font-bold text-sm">Challenge</span>
+                <span className="text-brand-orange font-bold text-sm md:text-base">Challenge</span>
               </div>
             </Link>
             <Link href="/progress" className="block group">
-              <div className="bg-tile-progress rounded-[20px] h-[92px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-0.5 cursor-pointer shadow-card border border-blue-100/60">
-                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
-                  <TrendingUp className="text-blue-600 w-5 h-5" />
+              <div className="bg-tile-progress rounded-[20px] h-[100px] md:h-[120px] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group-hover:-translate-y-1 cursor-pointer shadow-card border border-blue-100/60">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/70 flex items-center justify-center shadow-sm">
+                  <TrendingUp className="text-blue-600 w-5 h-5 md:w-6 md:h-6" />
                 </div>
-                <span className="text-blue-700 font-bold text-sm">Progress</span>
+                <span className="text-blue-700 font-bold text-sm md:text-base">Progress</span>
               </div>
             </Link>
           </div>

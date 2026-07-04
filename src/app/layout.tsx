@@ -41,6 +41,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+import Script from "next/script";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,14 +51,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Apply saved theme before paint to avoid a flash of the wrong theme */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
-          }}
-        />
       </head>
       <body className={`${baloo2.variable} ${notoDevanagari.variable} font-sans`}>
+        <Script id="theme-script">
+          {`try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}`}
+        </Script>
         <ServiceWorkerRegister />
         <NativeAppInit />
         <OfflineNotice />

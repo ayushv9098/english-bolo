@@ -237,8 +237,12 @@ export default function ProfilePage() {
   };
 
   const handleShareApp = () => {
-    const text = "Main AngreziBolo app par free mein English sikh raha hu! Aap bhi try karein: https://angrezibolo.vercel.app";
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    const text = "Main AngreziBolo app par free mein English sikh raha hu! Aap bhi try karein: https://english-bolo.vercel.app/";
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+    } else {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    }
 
     const today = new Date().toDateString();
     const lastShared = localStorage.getItem('last_shared_date');
@@ -494,7 +498,7 @@ export default function ProfilePage() {
   return (
     <PageTransition className="flex-1 flex flex-col gap-6 p-5 pb-20 overflow-x-hidden bg-surface">
       {/* HERO */}
-      <section className="relative">
+      <section className="relative md:max-w-3xl md:mx-auto w-full">
         <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-brand-purple via-purple-700 to-brand-dark p-6 pb-14 shadow-[0_16px_40px_-12px_rgba(108,99,255,0.55)]">
           {/* decorative glow */}
           <div className="absolute -right-8 -top-12 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -554,7 +558,7 @@ export default function ProfilePage() {
         </div>
 
         {/* floating stats */}
-        <div className="relative z-20 -mt-9 px-3 grid grid-cols-3 gap-2.5">
+        <div className="relative z-20 -mt-9 px-3 grid grid-cols-3 gap-3 md:gap-6">
           <Card className="p-3 border-none shadow-card flex flex-col items-center gap-0.5 rounded-[18px] bg-white active:scale-95 transition-transform group">
             <div className="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center mb-0.5 group-hover:scale-110 transition-transform"><Star size={15} className="text-yellow-500 fill-yellow-200" /></div>
             <div className="text-lg font-black text-brand-dark leading-none">{totalXP}</div>
@@ -574,7 +578,7 @@ export default function ProfilePage() {
       </section>
 
       {/* BADGES & ITEMS SECTION - COLLAPSIBLE */}
-      <section className="flex flex-col gap-2.5">
+      <section className="flex flex-col gap-2.5 md:max-w-3xl md:mx-auto w-full">
         <button onClick={() => setBadgesExpanded(!badgesExpanded)} className="w-full text-left focus:outline-none active:scale-[0.99] transition-transform">
           <Card className={cn("p-3 border-none shadow-card flex items-center justify-between transition-all rounded-[20px]", badgesExpanded ? "bg-white" : "bg-white/70")}>
             <div className="flex items-center gap-3">
@@ -613,7 +617,7 @@ export default function ProfilePage() {
       </section>
 
       {/* REWARD STORE SECTION - COLLAPSIBLE */}
-      <section className="flex flex-col gap-2.5">
+      <section className="flex flex-col gap-2.5 md:max-w-3xl md:mx-auto w-full">
         <button onClick={() => setStoreExpanded(!storeExpanded)} className="w-full text-left focus:outline-none active:scale-[0.99] transition-transform">
           <Card className={cn("p-3 border-none shadow-card flex items-center justify-between transition-all rounded-[20px]", storeExpanded ? "bg-white" : "bg-white/70")}>
             <div className="flex items-center gap-3">
@@ -650,7 +654,7 @@ export default function ProfilePage() {
       </section>
 
       {/* ACCOUNT & SETTINGS SECTION - ALWAYS VISIBLE */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3 md:max-w-3xl md:mx-auto w-full">
         <div className="flex items-center gap-2 px-1"><span className="w-1 h-3.5 rounded-full bg-gradient-to-b from-brand-orange to-brand-purple" /><h3 className="text-[10px] font-black text-brand-dark/30 uppercase tracking-[0.15em]">Account & Settings</h3></div>
         <div className="flex flex-col gap-2">
           <Link href="/progress"><Card className="p-3 flex items-center justify-between border-none hover:bg-white transition-all cursor-pointer shadow-sm active:scale-[0.98] rounded-[16px] bg-white group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center group-active:scale-90 transition-transform"><BarChart2 size={18} className="text-brand-orange" /></div><span className="text-[14px] font-bold text-brand-dark">My Activity</span></div><ChevronRight size={16} className="text-brand-dark/20" /></Card></Link>
@@ -662,7 +666,9 @@ export default function ProfilePage() {
       </section>
 
       {/* SIGN OUT BUTTON */}
-      <Button variant="ghost" className="mt-2 border-2 border-slate-100 text-slate-400 hover:bg-slate-50 gap-2 font-black py-3.5 rounded-xl bg-white shadow-sm active:scale-95 w-full uppercase tracking-widest text-[10px]" onClick={() => setShowSignOutConfirm(true)}><LogOut size={14} strokeWidth={3} />Sign Out</Button>
+      <div className="md:max-w-3xl md:mx-auto w-full">
+        <Button variant="ghost" className="mt-2 border-2 border-slate-100 text-slate-400 hover:bg-slate-50 gap-2 font-black py-3.5 rounded-xl bg-white shadow-sm active:scale-95 w-full uppercase tracking-widest text-[10px]" onClick={() => setShowSignOutConfirm(true)}><LogOut size={14} strokeWidth={3} />Sign Out</Button>
+      </div>
 
       {renderModals()}
     </PageTransition>

@@ -222,9 +222,9 @@ export default function WordRushGame() {
   // ─────────────────────────────────────────────
   return (
     <PageTransition>
-      <div className="min-h-screen bg-surface flex flex-col max-w-md mx-auto">
+      <div className="min-h-screen bg-surface flex flex-col w-full max-w-md md:max-w-2xl mx-auto relative">
         {/* HEADER */}
-        <header className="px-4 py-3 flex items-center justify-between bg-white shadow-sm z-10 sticky top-0">
+        <header className="px-4 md:px-6 py-4 flex items-center justify-between bg-white/70 backdrop-blur-md z-10 sticky top-0 border-b border-white/50 md:rounded-b-3xl">
           <button
             onClick={() => router.push("/games")}
             className="p-2 -ml-2 rounded-full hover:bg-gray-100 active:scale-90 transition-transform"

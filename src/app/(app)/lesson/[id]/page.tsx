@@ -251,7 +251,7 @@ export default function LessonPage() {
   return (
     <PageTransition className="flex flex-col min-h-screen bg-surface selection:bg-brand-orange/20 pb-16 font-sans">
       <div className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md px-4 pt-4 pb-1 border-b border-white/50">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md md:max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-2.5">
             <button onClick={() => router.back()} className="p-1 hover:bg-black/5 rounded-full transition-colors active:scale-90">
               <ArrowLeft className="w-4 h-4 text-brand-dark" strokeWidth={3} />
@@ -267,7 +267,7 @@ export default function LessonPage() {
         </div>
       </div>
 
-      <main className="flex-1 max-w-md mx-auto w-full p-4 flex flex-col pb-24">
+      <main className="flex-1 max-w-md md:max-w-2xl mx-auto w-full p-4 flex flex-col pb-24">
         {step === 1 && (
           <div className="flex flex-col gap-5 animate-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col items-center text-center gap-1.5">

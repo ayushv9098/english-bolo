@@ -129,7 +129,7 @@ export default function LessonsPage() {
       </div>
 
       {/* LESSON CARDS LIST */}
-      <div className="flex flex-col gap-3 mt-1">
+      <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-1">
         {loading ? (
            Array.from({ length: 5 }).map((_, i) => (
              <Card key={i} className="p-3 border-none shadow-sm flex items-center gap-3">

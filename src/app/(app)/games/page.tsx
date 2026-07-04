@@ -64,7 +64,7 @@ export default function GamesHub() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen pb-32 px-6 pt-12 max-w-md mx-auto flex flex-col gap-8">
+      <div className="min-h-screen pb-32 px-6 pt-12 md:max-w-5xl md:mx-0 max-w-md mx-auto flex flex-col gap-8 w-full">
         {/* PREMIUM HEADER */}
         <header className="space-y-1">
           <h1 className="text-[36px] font-black text-brand-dark tracking-tight leading-none">
@@ -117,19 +117,20 @@ export default function GamesHub() {
              <span className="text-[11px] font-black text-brand-dark/30 uppercase tracking-[0.2em]">Available Missions</span>
           </div>
 
-          {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="p-4 border-none shadow-card flex items-center gap-4">
-                <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-1/2 rounded-full" />
-                  <Skeleton className="h-3 w-3/4 rounded-full" />
-                </div>
-              </Card>
-            ))
-          ) : (
-            games.map((game, index) => (
-              <Link key={index} href={game.href ?? "/games"} className="group">
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-4">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="p-4 border-none shadow-card flex items-center gap-4">
+                  <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/2 rounded-full" />
+                    <Skeleton className="h-3 w-3/4 rounded-full" />
+                  </div>
+                </Card>
+              ))
+            ) : (
+              games.map((game, index) => (
+                <Link key={index} href={game.href ?? "/games"} className="group">
                 <Card className={cn(
                   "p-4 flex items-center gap-4 active:scale-[0.98] transition-all border-[1.5px] shadow-sm hover:shadow-md rounded-[24px]",
                   game.theme,
@@ -156,6 +157,7 @@ export default function GamesHub() {
               </Link>
             ))
           )}
+          </div>
         </div>
       </div>
     </PageTransition>

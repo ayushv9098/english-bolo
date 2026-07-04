@@ -59,8 +59,8 @@ export function HomeGamesRow({ playedToday }: HomeGamesRowProps) {
     },
   ];
 
-  // Repeat the games array to create an "infinite" feel when manually scrolling
-  const games = Array(15).fill(baseGames).flat();
+  // Just use the actual games, no duplication needed.
+  const games = baseGames;
 
   return (
     <div className="space-y-4">
@@ -76,20 +76,20 @@ export function HomeGamesRow({ playedToday }: HomeGamesRowProps) {
 
       <div 
         ref={scrollRef}
-        className="flex gap-3.5 overflow-x-auto pb-4 overflow-y-hidden -mx-5 px-[calc(50%-55px)] snap-x snap-mandatory [&::-webkit-scrollbar]:hidden" 
+        className="flex md:grid md:grid-cols-4 gap-3.5 md:gap-5 overflow-x-auto md:overflow-visible pb-6 md:pb-2 overflow-y-hidden -mx-5 md:mx-0 px-[calc(50%-55px)] md:px-0 snap-x md:snap-none snap-mandatory [&::-webkit-scrollbar]:hidden" 
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         onScroll={handleScroll}
       >
         {games.map((game, i) => (
-          <Link key={i} href={game.href} className="shrink-0 snap-center group">
+          <Link key={i} href={game.href} className="shrink-0 md:w-full md:snap-align-none snap-center group">
             <div
               className={cn(
-                "w-[110px] h-[145px] flex flex-col justify-between items-center rounded-[24px] p-3 text-center border-[1.5px] relative transition-all duration-300 ease-out",
+                "w-[110px] md:w-full h-[145px] md:h-[160px] flex flex-col justify-between items-center rounded-[24px] p-3 text-center border-[1.5px] relative transition-all duration-300 ease-out",
                 game.theme,
                 game.accent,
                 activeIndex === i 
                   ? "scale-100 opacity-100 shadow-card" 
-                  : "scale-[0.85] opacity-50 shadow-none"
+                  : "scale-[0.85] md:scale-100 opacity-50 md:opacity-100 shadow-none md:shadow-sm hover:md:shadow-card hover:md:-translate-y-1"
               )}
             >
               {/* Status Dot */}

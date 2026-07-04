@@ -14,7 +14,10 @@ function cn(...inputs: ClassValue[]) {
 export default function BottomNav() {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/lesson/")) return null;
+  const isLesson = pathname.startsWith("/lesson/");
+  const isSpecificGame = pathname.startsWith("/games/") && pathname !== "/games";
+
+  if (isLesson || isSpecificGame) return null;
 
   const navItems = [
     { label: "Home", icon: Home, href: "/home" },
@@ -24,8 +27,14 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-xl border-t border-[#F5EDE8] px-3 min-h-[62px] pb-[env(safe-area-inset-bottom,12px)] pt-2.5 z-50 shadow-[0_-6px_24px_-12px_rgba(26,26,46,0.14)]">
-      <div className="max-w-md mx-auto flex justify-around items-center h-full gap-1">
+    <nav className="fixed bottom-0 left-0 right-0 md:top-0 md:bottom-0 md:w-[260px] md:right-auto md:border-r md:border-t-0 bg-white/85 dark:bg-[#12121A]/85 backdrop-blur-xl border-t border-[#F5EDE8] dark:border-[#2A2A38] px-3 md:px-6 min-h-[62px] pb-[env(safe-area-inset-bottom,12px)] pt-2.5 md:pt-14 md:pb-8 z-50 shadow-[0_-6px_24px_-12px_rgba(26,26,46,0.14)] md:shadow-none transition-all">
+      {/* Brand logo for desktop only */}
+      <div className="hidden md:flex items-center gap-3 mb-10 px-2">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-orange to-brand-purple flex items-center justify-center text-white font-black text-xl shadow-sm">A</div>
+        <span className="font-black text-brand-dark tracking-tight text-xl">AngreziBolo</span>
+      </div>
+
+      <div className="w-full max-w-xl mx-auto md:mx-0 flex md:flex-col justify-around md:justify-start items-center md:items-stretch h-full gap-1 md:gap-3">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -35,8 +44,8 @@ export default function BottomNav() {
               href={item.href}
               aria-label={item.label}
               className={cn(
-                "relative flex items-center justify-center rounded-full h-11 select-none transition-[padding] duration-300",
-                isActive ? "px-4" : "px-3.5 active:scale-90"
+                "relative flex items-center justify-center md:justify-start rounded-full h-11 md:h-12 select-none transition-[padding] duration-300 group",
+                isActive ? "px-4 md:px-5" : "px-3.5 md:px-5 active:scale-90"
               )}
             >
               {/* sliding morphing pill behind the active tab */}
@@ -67,12 +76,18 @@ export default function BottomNav() {
                       animate={{ width: "auto", opacity: 1 }}
                       exit={{ width: 0, opacity: 0 }}
                       transition={{ duration: 0.28, ease: "easeOut" }}
-                      className="overflow-hidden whitespace-nowrap text-[11px] font-black uppercase tracking-wide text-white"
+                      className="overflow-hidden whitespace-nowrap text-[11px] font-black uppercase tracking-wide text-white md:hidden"
                     >
                       {item.label}
                     </motion.span>
                   )}
                 </AnimatePresence>
+                <span className={cn(
+                  "hidden md:block whitespace-nowrap text-sm font-bold ml-1 transition-colors",
+                  isActive ? "text-white" : "text-brand-dark/70 group-hover:text-brand-orange"
+                )}>
+                  {item.label}
+                </span>
               </span>
             </Link>
           );

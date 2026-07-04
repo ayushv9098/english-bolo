@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import { GamificationProvider } from "@/context/GamificationContext";
 import { XPPopup } from "@/components/gamification/XPPopup";
 import { LootBoxModal } from "@/components/gamification/LootBoxModal";
+import MainLayoutWrapper from "@/components/layout/MainLayoutWrapper";
 
 export default function AppLayout({
   children,
@@ -41,9 +42,9 @@ export default function AppLayout({
         />
         <XPPopup />
         <LootBoxModal />
-        <main className="max-w-md mx-auto min-h-screen flex flex-col pb-24 md:border-x md:border-[#F5EDE8] md:shadow-sm bg-surface relative">
+        <MainLayoutWrapper>
           {children}
-        </main>
+        </MainLayoutWrapper>
         <BottomNav />
       </div>
     </GamificationProvider>
