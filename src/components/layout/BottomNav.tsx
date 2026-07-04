@@ -29,9 +29,8 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 md:top-0 md:bottom-0 md:w-[260px] md:right-auto md:border-r md:border-t-0 bg-white/85 dark:bg-[#12121A]/85 backdrop-blur-xl border-t border-[#F5EDE8] dark:border-[#2A2A38] px-3 md:px-6 min-h-[62px] pb-[env(safe-area-inset-bottom,12px)] pt-2.5 md:pt-14 md:pb-8 z-50 shadow-[0_-6px_24px_-12px_rgba(26,26,46,0.14)] md:shadow-none transition-all">
       {/* Brand logo for desktop only */}
-      <div className="hidden md:flex items-center gap-3 mb-10 px-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-orange to-brand-purple flex items-center justify-center text-white font-black text-xl shadow-sm">A</div>
-        <span className="font-black text-brand-dark tracking-tight text-xl">AngreziBolo</span>
+      <div className="hidden md:flex items-center justify-center mb-10 px-2">
+        <img src="/logo.png" alt="AngreziBolo" className="h-16 object-contain" />
       </div>
 
       <div className="w-full max-w-xl mx-auto md:mx-0 flex md:flex-col justify-around md:justify-start items-center md:items-stretch h-full gap-1 md:gap-3">

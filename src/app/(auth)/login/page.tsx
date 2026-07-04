@@ -94,8 +94,8 @@ export default function LoginPage() {
   return (
     <PageTransition className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface">
       <Card className="w-full max-w-md p-8 space-y-8 border-none shadow-float overflow-hidden">
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-extrabold text-brand-dark tracking-tight">AngreziBolo</h1>
+        <div className="text-center space-y-1 flex flex-col items-center">
+          <img src="/logo.png" alt="AngreziBolo" className="h-16 mb-2 object-contain drop-shadow-sm" />
           <p className="text-muted text-sm">Sign in to your account</p>
         </div>
 

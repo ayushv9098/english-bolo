@@ -95,7 +95,8 @@ export default function SignupPage() {
   return (
     <PageTransition className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface">
       <Card className="w-full max-w-md p-6 sm:p-8 space-y-6 border-none shadow-float overflow-hidden">
-        <div className="text-center space-y-1.5">
+        <div className="text-center space-y-1.5 flex flex-col items-center">
+          <img src="/logo.png" alt="AngreziBolo" className="h-16 mb-1 object-contain drop-shadow-sm" />
           <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-dark tracking-tight leading-none">Create Account</h1>
           <p className="text-muted font-medium text-[13px]">Join AngreziBolo to start learning</p>
         </div>
